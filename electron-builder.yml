@@ -1,0 +1,39 @@
+appId: com.irie-shingo.myloggy
+productName: Myloggy
+
+directories:
+  buildResources: build
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+
+extraResources:
+  - resources/**
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
+  artifactName: "${productName}-${version}-${arch}.${ext}"
+
+dmg:
+  title: "${productName} ${version}"
+  window:
+    width: 540
+    height: 380
+
+afterSign: scripts/notarize.js
