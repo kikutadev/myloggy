@@ -1,5 +1,5 @@
 appId: com.irie-shingo.myloggy
-productName: Myloggy
+productName: myloggy
 
 directories:
   buildResources: build
@@ -14,6 +14,7 @@ extraResources:
   - resources/**
 
 mac:
+  icon: build/icon.icns
   target:
     - target: dmg
       arch:

@@ -1,7 +1,7 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 ![Platform: macOS](https://img.shields.io/badge/Platform-macOS-lightgrey)
 
-# Myloggy
+# myloggy
 
 A local-first work logging app for macOS. Captures screenshots every minute, generates AI-powered checkpoints every 10 minutes via Ollama, and organizes your work into daily / weekly / monthly views.
 

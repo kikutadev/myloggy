@@ -71,7 +71,7 @@ function createMainWindow(): BrowserWindow {
     void win.loadURL(devServerUrl ?? 'http://127.0.0.1:5173');
     win.webContents.openDevTools({ mode: 'detach' });
   } else {
-    void win.loadFile(path.join(__dirname, '../dist/index.html'));
+    void win.loadFile(path.join(__dirname, '../../dist/index.html'));
   }
 
   win.on('closed', () => { mainWindow = null; });
@@ -98,7 +98,7 @@ function createMiniWindow(): BrowserWindow {
   if (isDev) {
     void win.loadURL(`${devServerUrl ?? 'http://127.0.0.1:5173'}/mini.html`);
   } else {
-    void win.loadFile(path.join(__dirname, '../dist/mini.html'));
+    void win.loadFile(path.join(__dirname, '../../dist/mini.html'));
   }
 
   win.on('blur', () => { win.hide(); });
