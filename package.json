@@ -1,6 +1,6 @@
 {
   "name": "myloggy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": false,
   "description": "Local-first work logging app powered by Electron, SQLite, and Ollama.",
   "author": "Shingo Irie",
