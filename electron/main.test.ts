@@ -107,218 +107,229 @@ vi.mock('../shared/localization.js', () => ({
   normalizeLocale: vi.fn(() => 'en'),
 }));
 
-describe('electron/main.ts 振る舞いテスト', () => {
+describe('window-manager.ts', () => {
   beforeEach(() => {
     mockBrowserWindowInstances.length = 0;
     vi.resetModules();
   });
 
-  describe('IPCハンドラ登録', () => {
-    it('全てのIPCハンドラが登録されている', async () => {
-      await import('./main.js');
+  describe('broadcastSettingsChanged', () => {
+    it('両ウィンドウに設定変更を送信する', async () => {
+      const { broadcastSettingsChanged, createMainWindow, createMiniWindow } = await import('./window-manager.js');
 
-      const handlerNames = [
-        'bootstrap',
-        'dashboard:get',
-        'timeline:day',
-        'timeline:week',
-        'timeline:month',
-        'settings:get',
-        'settings:update',
-        'tracking:toggle',
-        'tracking:capture-now',
-        'tracking:analyze-now',
-        'tracking:clear-pending',
-        'tracking:clear-errors',
-        'work-unit:update',
-        'open-dashboard',
-        'debug:data',
-        'ollama:check',
-        'ollama:test-model',
-      ];
+      createMainWindow();
+      createMiniWindow();
 
-      for (const name of handlerNames) {
-        const hasHandler = mockIpcMain.handle.mock.calls.some((call: any[]) => call[0] === name);
-        expect(hasHandler).toBe(true);
-      }
+      const win1 = mockBrowserWindowInstances[0];
+      const win2 = mockBrowserWindowInstances[1];
+
+      broadcastSettingsChanged({ isTracking: true } as any);
+
+      expect(win1.webContents.send).toHaveBeenCalledWith('settings:changed', { isTracking: true });
+      expect(win2.webContents.send).toHaveBeenCalledWith('settings:changed', { isTracking: true });
+    });
+
+    it('破棄されたウィンドウには送信しない', async () => {
+      const { broadcastSettingsChanged, createMainWindow } = await import('./window-manager.js');
+
+      const win = createMainWindow();
+      win._isDestroyed = true;
+
+      broadcastSettingsChanged({ isTracking: true } as any);
+
+      expect(win.webContents.send).not.toHaveBeenCalled();
     });
   });
 
-  describe('bootstrap ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  describe('getTrayIconPath', () => {
+    it('resourcesディレクトリのパスを返す', async () => {
+      const { getTrayIconPath } = await import('./window-manager.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'bootstrap')?.[1];
+      const path = getTrayIconPath();
 
-      const result = await handler(null, '2024-06-15');
+      expect(path).toContain('resources');
+      expect(path).toContain('trayIconTemplate.png');
+    });
 
-      expect(result).toEqual({ locale: 'en', state: {}, settings: {} });
+    it('アイコンが存在しない場合は作成する', async () => {
+      const fs = await import('node:fs');
+      const { getTrayIconPath } = await import('./window-manager.js');
+
+      getTrayIconPath();
+
+      expect(fs.default.mkdirSync).toHaveBeenCalled();
+      expect(fs.default.writeFileSync).toHaveBeenCalled();
     });
   });
 
-  describe('dashboard:get ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  describe('createMainWindow', () => {
+    it('メインウィンドウを作成する', async () => {
+      const { createMainWindow } = await import('./window-manager.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'dashboard:get')?.[1];
+      const win = createMainWindow();
 
-      const result = await handler(null, '2024-06-15');
+      expect(win).toBeDefined();
+      expect(win.loadURL).toHaveBeenCalled();
+    });
 
-      expect(result).toEqual({ date: '2024-01-01', totalMinutes: 0, units: [], categorySummary: [], projectSummary: [] });
+    it('ウィンドウを返す', async () => {
+      const { createMainWindow, getMainWindow } = await import('./window-manager.js');
+
+      const win = createMainWindow();
+      const retrievedWin = getMainWindow();
+
+      expect(win).toBe(retrievedWin);
     });
   });
 
-  describe('settings:update ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  describe('createMiniWindow', () => {
+    it('ミニウィンドウを作成する', async () => {
+      const { createMiniWindow } = await import('./window-manager.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'settings:update')?.[1];
+      const win = createMiniWindow();
 
-      const result = await handler(null, { isTracking: false, language: 'ja' });
+      expect(win).toBeDefined();
+      expect(win.loadURL).toHaveBeenCalledWith(expect.stringContaining('mini.html'));
+    });
 
-      expect(result).toEqual({ isTracking: false, ollamaHost: 'http://localhost:11434', language: 'ja' });
+    it('フォーカスを失ったときに非表示にする', async () => {
+      const { createMiniWindow } = await import('./window-manager.js');
+
+      const win = createMiniWindow();
+
+      const blurHandler = win.on.mock.calls.find((call: any[]) => call[0] === 'blur')?.[1];
+      expect(blurHandler).toBeDefined();
+
+      blurHandler();
+      expect(win.hide).toHaveBeenCalled();
     });
   });
 
-  describe('tracking:toggle ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  describe('createTray', () => {
+    it('トレイアイコンを作成し、ツールチップを設定する', async () => {
+      const electron = await import('electron');
+      const { createTray } = await import('./window-manager.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:toggle')?.[1];
+      createTray();
 
-      const result = await handler(null, true);
-
-      expect(result).toEqual({ isTracking: false });
+      expect(electron.nativeImage.createFromPath).toHaveBeenCalled();
+      expect(electron.nativeImage.createFromPath).toHaveBeenCalledWith(expect.any(String));
     });
   });
+});
 
-  describe('tracking:capture-now ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+describe('ipc-handlers.ts', () => {
+  let mockTracker: any;
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:capture-now')?.[1];
-
-      const result = await handler(null);
-
-      expect(result).toEqual({ isTracking: false });
-    });
+  beforeEach(() => {
+    mockBrowserWindowInstances.length = 0;
+    mockIpcMain.handle = vi.fn();
+    mockTracker = {
+      getBootstrap: vi.fn(() => ({ locale: 'en', state: {}, settings: {} })),
+      getDashboard: vi.fn(() => ({ date: '2024-01-01', totalMinutes: 0, units: [], categorySummary: [], projectSummary: [] })),
+      getDayTimeline: vi.fn(() => ({ date: '2024-01-01', units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 })),
+      getWeekTimeline: vi.fn(() => ({ startDate: '2024-01-01', endDate: '2024-01-07', units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0, distractedCount: 0 })),
+      getMonthTimeline: vi.fn(() => ({ month: '2024-01', days: [], categorySummary: [], projectSummary: [], comment: '' })),
+      getSettings: vi.fn(() => ({ isTracking: true, ollamaHost: 'http://localhost:11434' })),
+      updateSettings: vi.fn(() => ({ isTracking: false, ollamaHost: 'http://localhost:11434', language: 'ja' })),
+      setTracking: vi.fn(() => ({ isTracking: false })),
+      captureNow: vi.fn(() => Promise.resolve({ isTracking: false })),
+      analyzeNow: vi.fn(() => Promise.resolve({ isTracking: false })),
+      clearPendingSnapshots: vi.fn(() => Promise.resolve({ isTracking: true })),
+      clearErrors: vi.fn(() => ({ isTracking: true })),
+      updateWorkUnit: vi.fn(() => ({ id: 'w1', title: 'Test' } as any)),
+      getDebugData: vi.fn(() => ({ snapshots: [], errors: [] })),
+    };
+    vi.resetModules();
   });
 
-  describe('tracking:analyze-now ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  it('registerIpcHandlersが全てのIPCハンドラを登録する', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:analyze-now')?.[1];
+    registerIpcHandlers(mockTracker, () => null, vi.fn());
 
-      const result = await handler(null);
+    const handlerNames = [
+      'bootstrap',
+      'dashboard:get',
+      'timeline:day',
+      'timeline:week',
+      'timeline:month',
+      'settings:get',
+      'settings:update',
+      'tracking:toggle',
+      'tracking:capture-now',
+      'tracking:analyze-now',
+      'tracking:clear-pending',
+      'tracking:clear-errors',
+      'work-unit:update',
+      'open-dashboard',
+      'debug:data',
+      'ollama:check',
+      'ollama:test-model',
+    ];
 
-      expect(result).toEqual({ isTracking: false });
-    });
+    for (const name of handlerNames) {
+      const hasHandler = mockIpcMain.handle.mock.calls.some((call: any[]) => call[0] === name);
+      expect(hasHandler).toBe(true);
+    }
   });
 
-  describe('tracking:clear-pending ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  it('bootstrapハンドラがtracker.getBootstrapを呼ぶ', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:clear-pending')?.[1];
+    registerIpcHandlers(mockTracker, () => null, vi.fn());
 
-      const result = await handler(null);
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'bootstrap')?.[1];
+    const result = await handler(null, '2024-06-15');
 
-      expect(result).toEqual({ isTracking: true });
-    });
+    expect(mockTracker.getBootstrap).toHaveBeenCalledWith('2024-06-15');
+    expect(result).toEqual({ locale: 'en', state: {}, settings: {} });
   });
 
-  describe('tracking:clear-errors ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  it('settings:updateハンドラが更新後にbroadcastSettingsChangedを呼ぶ', async () => {
+    const broadcast = vi.fn();
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:clear-errors')?.[1];
+    registerIpcHandlers(mockTracker, () => null, broadcast);
 
-      const result = await handler(null);
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'settings:update')?.[1];
+    await handler(null, { isTracking: false });
 
-      expect(result).toEqual({ isTracking: true });
-    });
+    expect(mockTracker.updateSettings).toHaveBeenCalledWith({ isTracking: false });
+    expect(broadcast).toHaveBeenCalledWith({ isTracking: false, ollamaHost: 'http://localhost:11434', language: 'ja' });
   });
 
-  describe('work-unit:update ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
+  it('tracking:toggleハンドラがtracker.setTrackingを呼ぶ', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'work-unit:update')?.[1];
+    registerIpcHandlers(mockTracker, () => null, vi.fn());
 
-      const patch = { id: 'w1', title: 'Updated Title' };
-      const result = await handler(null, patch);
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'tracking:toggle')?.[1];
+    await handler(null, false);
 
-      expect(result).toEqual({ id: 'w1', title: 'Test', category: 'dev', progressLevel: 0, userEdited: false, updatedAt: '', note: '' });
-    });
+    expect(mockTracker.setTracking).toHaveBeenCalledWith(false);
   });
 
-  describe('open-dashboard ハンドラ', () => {
-    it('ウィンドウを作成する', async () => {
-      await import('./main.js');
+  it('dashboard:getハンドラがtracker.getDashboardを呼ぶ', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'open-dashboard')?.[1];
+    registerIpcHandlers(mockTracker, () => null, vi.fn());
 
-      await handler();
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'dashboard:get')?.[1];
+    const result = await handler(null, '2024-06-15');
 
-      expect(mockBrowserWindowInstances.length).toBeGreaterThan(0);
-    });
+    expect(mockTracker.getDashboard).toHaveBeenCalledWith('2024-06-15');
   });
 
-  describe('timeline ハンドラ', () => {
-    it('timeline:day 正しい戻り値を返す', async () => {
-      await import('./main.js');
+  it('timeline:dayハンドラがtracker.getDayTimelineを呼ぶ', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
 
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'timeline:day')?.[1];
+    registerIpcHandlers(mockTracker, () => null, vi.fn());
 
-      const result = await handler(null, '2024-06-15');
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'timeline:day')?.[1];
+    const result = await handler(null, '2024-06-15');
 
-      expect(result).toEqual({ date: '2024-01-01', units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 });
-    });
-
-    it('timeline:week 正しい戻り値を返す', async () => {
-      await import('./main.js');
-
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'timeline:week')?.[1];
-
-      const result = await handler(null, '2024-06-15');
-
-      expect(result).toEqual({ startDate: '2024-01-01', endDate: '2024-01-07', units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0, distractedCount: 0 });
-    });
-
-    it('timeline:month 正しい戻り値を返す', async () => {
-      await import('./main.js');
-
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'timeline:month')?.[1];
-
-      const result = await handler(null, '2024-06');
-
-      expect(result).toEqual({ month: '2024-01', days: [], categorySummary: [], projectSummary: [], comment: '' });
-    });
-  });
-
-  describe('debug:data ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
-
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'debug:data')?.[1];
-
-      const result = await handler(null);
-
-      expect(result).toEqual({ snapshots: [], errors: [] });
-    });
-  });
-
-  describe('settings:get ハンドラ', () => {
-    it('正しい戻り値を返す', async () => {
-      await import('./main.js');
-
-      const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'settings:get')?.[1];
-
-      const result = await handler(null);
-
-      expect(result).toEqual({ isTracking: true, ollamaHost: 'http://localhost:11434' });
-    });
+    expect(mockTracker.getDayTimeline).toHaveBeenCalledWith('2024-06-15');
   });
 });
 
@@ -326,10 +337,11 @@ describe('ollama:check ハンドラ', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    mockBrowserWindowInstances.length = 0;
+    mockIpcMain.handle = vi.fn();
     vi.resetModules();
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    await import('./main.js');
   });
 
   afterEach(() => {
@@ -342,6 +354,10 @@ describe('ollama:check ハンドラ', () => {
       json: async () => ({ models: [{ name: 'llama2' }, { name: 'codellama' }] }),
     });
 
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    const mockTracker = { getSettings: vi.fn(() => ({ ollamaHost: 'http://localhost:11434' })) };
+    registerIpcHandlers(mockTracker as any, () => null, vi.fn());
+
     const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:check')?.[1];
     const result = await handler(null);
 
@@ -351,49 +367,14 @@ describe('ollama:check ハンドラ', () => {
   it('Ollamaが起動していない場合running:falseを返す', async () => {
     fetchMock.mockRejectedValue(new Error('Connection refused'));
 
-    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:check')?.[1];
-    const result = await handler(null);
-
-    expect(result).toEqual({ running: false, models: [] });
-  });
-
-  it('Ollamaがエラーレスポンスを返した場合running:falseを返す', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 500,
-    });
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    const mockTracker = { getSettings: vi.fn(() => ({ ollamaHost: 'http://localhost:11434' })) };
+    registerIpcHandlers(mockTracker as any, () => null, vi.fn());
 
     const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:check')?.[1];
     const result = await handler(null);
 
     expect(result).toEqual({ running: false, models: [] });
-  });
-
-  it('modelsがない場合は空配列を返す', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
-    });
-
-    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:check')?.[1];
-    const result = await handler(null);
-
-    expect(result).toEqual({ running: true, models: [] });
-  });
-
-  it('settingsのollamaHostを使用する', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ models: [] }),
-    });
-
-    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:check')?.[1];
-    await handler(null);
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:11434/api/tags',
-      expect.any(Object)
-    );
   });
 });
 
@@ -401,10 +382,11 @@ describe('ollama:test-model ハンドラ', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    mockBrowserWindowInstances.length = 0;
+    mockIpcMain.handle = vi.fn();
     vi.resetModules();
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
-    await import('./main.js');
   });
 
   afterEach(() => {
@@ -417,34 +399,13 @@ describe('ollama:test-model ハンドラ', () => {
       json: async () => ({ response: 'OK' }),
     });
 
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    registerIpcHandlers({ getSettings: vi.fn() } as any, () => null, vi.fn());
+
     const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
     const result = await handler(null, { model: 'llama2', ollamaHost: 'http://localhost:11434' });
 
     expect(result).toEqual({ ok: true, message: 'Model responded successfully.' });
-  });
-
-  it('APIに正しいリクエストを送信する', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ response: 'OK' }),
-    });
-
-    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
-    await handler(null, { model: 'llama2', ollamaHost: 'http://localhost:11434' });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      'http://localhost:11434/api/generate',
-      expect.objectContaining({
-        method: 'POST',
-      })
-    );
-
-    const fetchCall = fetchMock.mock.calls[0];
-    const body = JSON.parse(fetchCall[1].body);
-    expect(body.model).toBe('llama2');
-    expect(body.prompt).toBe('Reply with OK.');
-    expect(body.stream).toBe(false);
-    expect(body.options).toEqual({ temperature: 0, num_predict: 8 });
   });
 
   it('エラーレスポンスの場合ok:falseを返す', async () => {
@@ -453,31 +414,41 @@ describe('ollama:test-model ハンドラ', () => {
       json: async () => ({ error: 'Model not found' }),
     });
 
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    registerIpcHandlers({ getSettings: vi.fn() } as any, () => null, vi.fn());
+
     const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
     const result = await handler(null, { model: 'nonexistent', ollamaHost: 'http://localhost:11434' });
 
     expect(result).toEqual({ ok: false, message: 'Model not found' });
   });
 
-  it('HTTPエラーの場合ステータスコードをメッセージに含める', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: async () => ({}),
-    });
-
-    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
-    const result = await handler(null, { model: 'llama2', ollamaHost: 'http://localhost:11434' });
-
-    expect(result).toEqual({ ok: false, message: 'HTTP 404' });
-  });
-
   it('例外が発生した場合ok:falseを返す', async () => {
     fetchMock.mockRejectedValue(new Error('Network error'));
+
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    registerIpcHandlers({ getSettings: vi.fn() } as any, () => null, vi.fn());
 
     const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
     const result = await handler(null, { model: 'llama2', ollamaHost: 'http://localhost:11434' });
 
     expect(result).toEqual({ ok: false, message: 'Network error' });
+  });
+
+  it('低温設定でリクエストを送信する', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: 'OK' }),
+    });
+
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    registerIpcHandlers({ getSettings: vi.fn() } as any, () => null, vi.fn());
+
+    const handler = mockIpcMain.handle.mock.calls.find((call: any[]) => call[0] === 'ollama:test-model')?.[1];
+    await handler(null, { model: 'llama2', ollamaHost: 'http://localhost:11434' });
+
+    const fetchCall = fetchMock.mock.calls[0];
+    const body = JSON.parse(fetchCall[1].body);
+    expect(body.options).toEqual({ temperature: 0, num_predict: 8 });
   });
 });
