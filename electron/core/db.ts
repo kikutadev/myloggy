@@ -19,7 +19,7 @@ import {
 import { DEFAULT_SETTINGS } from './defaults.js';
 import { createId, safeJsonParse } from './utils.js';
 
-type SqlValue = string | number | null;
+type SqlValue = string | number | boolean | null;
 
 function normalizeBoolean(value: unknown): boolean | null {
   if (value === null || value === undefined) {
@@ -120,11 +120,15 @@ function rowToError(row: Record<string, unknown>): ErrorLogRecord {
 export class AppDatabase {
   private readonly db: DatabaseSync;
 
-  constructor(private readonly baseDir: string) {
-    fs.mkdirSync(baseDir, { recursive: true });
-    const dbPath = path.join(baseDir, 'myloggy.sqlite');
-    this.db = new DatabaseSync(dbPath);
-    this.db.exec('PRAGMA journal_mode = WAL;');
+  constructor(private readonly baseDir: string, useMemory = false) {
+    if (!useMemory) {
+      fs.mkdirSync(baseDir, { recursive: true });
+      const dbPath = path.join(baseDir, 'myloggy.sqlite');
+      this.db = new DatabaseSync(dbPath);
+      this.db.exec('PRAGMA journal_mode = WAL;');
+    } else {
+      this.db = new DatabaseSync(':memory:');
+    }
     this.db.exec('PRAGMA foreign_keys = ON;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS settings (
@@ -256,7 +260,12 @@ export class AppDatabase {
   }
 
   private run(sql: string, ...params: SqlValue[]): void {
-    this.db.prepare(sql).run(...params);
+    const normalizedParams = params.map((p) => {
+      if (typeof p === 'boolean') return p ? 1 : 0;
+      if (p === undefined) return null;
+      return p;
+    });
+    this.db.prepare(sql).run(...normalizedParams);
   }
 
   private ensureColumn(table: string, column: string, definition: string): void {
@@ -522,13 +531,13 @@ export class AppDatabase {
     );
   }
 
-  patchWorkUnit(patch: WorkUnitPatch): WorkUnitRecord | null {
+patchWorkUnit(patch: WorkUnitPatch): WorkUnitRecord | null {
     const normalizedPatch: WorkUnitPatch = {
       ...patch,
       projectName: patch.projectName === undefined ? undefined : toStoredProjectName(patch.projectName),
       category: patch.category === undefined ? undefined : toStoredCategoryLabel(patch.category),
     };
-    const current = this.getWorkUnitById(normalizedPatch.id);
+    const current = this.getWorkUnitById(patch.id);
     if (!current) {
       return null;
     }
@@ -541,7 +550,7 @@ export class AppDatabase {
     };
     this.updateWorkUnit(updated);
     if (normalizedPatch.category && updated.projectName && !isUnknownLabel(updated.projectName)) {
-      this.upsertCategoryRule(updated.projectName, updated.category);
+      this.upsertCategoryRule(updated.projectName, normalizedPatch.category);
     }
     return updated;
   }
