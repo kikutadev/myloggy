@@ -41,3 +41,4 @@ app-update.yml
 
 coverage
 playwright-report
+test-results

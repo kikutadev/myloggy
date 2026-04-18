@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { compactText, formatIssueLabel, navigateDate, ratioWidth, summarizeErrorMessage, translateStructuredIssue } from './App.js';
 import type { DashboardData } from '../shared/types.js';
 import { I18nProvider } from './i18n.js';
@@ -511,5 +511,119 @@ describe('Onboarding', () => {
       </I18nProvider>
     );
     expect(screen.getByText(/My Loggy/)).toBeInTheDocument();
+  });
+
+  it('should advance to step 1 when Start setup is clicked', async () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Start setup' }));
+    expect(screen.getByText('Install Ollama')).toBeInTheDocument();
+  });
+
+  it('should check Ollama status when entering step 1', async () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    expect(window.myloggy.checkOllama).toHaveBeenCalled();
+  });
+
+  it('should display Ollama running status when check returns running', async () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Ollama is running')).toBeInTheDocument();
+    });
+  });
+
+  it('should display Ollama missing when check returns not running', async () => {
+    window.myloggy.checkOllama.mockResolvedValueOnce({ running: false, models: [] });
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Ollama not found')).toBeInTheDocument();
+    });
+  });
+
+  it('should advance to step 2 when Next is clicked on step 1 with running Ollama', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => screen.getByText('Install Ollama'));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Install AI model')).toBeInTheDocument();
+  });
+
+  it('should show model installed when gemma4 model exists', async () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Model installed')).toBeInTheDocument();
+    });
+  });
+
+  it('should show model missing when gemma4 model does not exist', async () => {
+    window.myloggy.checkOllama.mockResolvedValueOnce({ running: true, models: ['llama3'] });
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByText('Model not found')).toBeInTheDocument();
+    });
+  });
+
+  it('should call onComplete when Get Started is clicked on final step', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={onComplete} />
+      </I18nProvider>
+    );
+    await waitFor(() => screen.getByText('Model installed'));
+    await user.click(screen.getByRole('button', { name: 'Get Started' }));
+    expect(onComplete).toHaveBeenCalled();
+  });
+
+  it('should go back from step 1 to step 0', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => screen.getByText('Install Ollama'));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText('Start setup')).toBeInTheDocument();
+  });
+
+  it('should recheck Ollama when recheck button is clicked', async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    await waitFor(() => screen.getByText('Install Ollama'));
+    await user.click(screen.getByRole('button', { name: 'Recheck' }));
+    expect(window.myloggy.checkOllama).toHaveBeenCalledTimes(2);
   });
 });
