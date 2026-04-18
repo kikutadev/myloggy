@@ -17,23 +17,23 @@ import { I18nProvider, useI18n } from './i18n.js';
 
 type ViewMode = 'day' | 'week' | 'month';
 
-function ratioWidth(value: number, total: number): string {
+export function ratioWidth(value: number, total: number): string {
   if (total === 0) return '0%';
   return `${Math.max(8, Math.round((value / total) * 100))}%`;
 }
 
-function navigateDate(direction: -1 | 1, view: ViewMode, current: string): string {
+export function navigateDate(direction: -1 | 1, view: ViewMode, current: string): string {
   const d = dayjs(current);
   if (view === 'day') return d.add(direction, 'day').format('YYYY-MM-DD');
   if (view === 'week') return d.add(direction * 7, 'day').format('YYYY-MM-DD');
   return d.add(direction, 'month').format('YYYY-MM-DD');
 }
 
-function compactText(value: string): string {
+export function compactText(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function formatIssueLabel(path: unknown, locale: SupportedLocale): string {
+export function formatIssueLabel(path: unknown, locale: SupportedLocale): string {
   const parts = Array.isArray(path) ? path.map(String) : [];
   const root = parts[0];
 
@@ -49,7 +49,7 @@ function formatIssueLabel(path: unknown, locale: SupportedLocale): string {
   return locale === 'ja' ? '返答形式' : 'response format';
 }
 
-function translateStructuredIssue(
+export function translateStructuredIssue(
   issue: { code?: unknown; expected?: unknown; received?: unknown; maximum?: unknown; path?: unknown; message?: unknown },
   locale: SupportedLocale,
 ): string {
@@ -80,7 +80,7 @@ function translateStructuredIssue(
   return typeof issue.message === 'string' ? issue.message : locale === 'ja' ? '返答形式が不正です' : 'Invalid response format';
 }
 
-function summarizeErrorMessage(message: string, locale: SupportedLocale): string {
+export function summarizeErrorMessage(message: string, locale: SupportedLocale): string {
   const trimmed = message.trim();
   if (!trimmed) {
     return '';
@@ -104,7 +104,7 @@ function summarizeErrorMessage(message: string, locale: SupportedLocale): string
   return compactText(firstLine);
 }
 
-function LoadingScreen() {
+export function LoadingScreen() {
   const { text } = useI18n();
   return <div className="loading">{text.loading}</div>;
 }
@@ -337,7 +337,7 @@ function WorkUnitEditor(props: {
   );
 }
 
-function DayView(props: { dashboard: DashboardData; categories: string[]; onRefresh: () => void }) {
+export function DayView(props: { dashboard: DashboardData; categories: string[]; onRefresh: () => void }) {
   const { text, categoryLabel, formatMinutes, formatTimeRange, projectLabel } = useI18n();
   const checkpointsById = useMemo(() => new Map(props.dashboard.today.checkpoints.map((checkpoint) => [checkpoint.id, checkpoint])), [props.dashboard.today.checkpoints]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -402,7 +402,7 @@ function DayView(props: { dashboard: DashboardData; categories: string[]; onRefr
   );
 }
 
-function WeekView(props: { dashboard: DashboardData }) {
+export function WeekView(props: { dashboard: DashboardData }) {
   const { text, formatMinutes } = useI18n();
 
   return (
@@ -452,7 +452,7 @@ function MonthCell(props: { day: DashboardData['month']['days'][number]; activeM
   );
 }
 
-function MonthView(props: { dashboard: DashboardData }) {
+export function MonthView(props: { dashboard: DashboardData }) {
   const { text, weekdays } = useI18n();
 
   return (

@@ -38,3 +38,5 @@ app-update.yml
 *.sqlite
 *.sqlite3
 *.db
+
+coverage
