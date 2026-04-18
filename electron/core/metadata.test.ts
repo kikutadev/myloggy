@@ -13,11 +13,15 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-  execFile: (...args: any[]) => execFileMock(...args),
+  default: {
+    execFile: (...args: any[]) => execFileMock(...args),
+  },
 }));
 
 vi.mock('node:util', () => ({
-  promisify: (fn: Function) => fn,
+  default: {
+    promisify: (fn: Function) => fn,
+  },
 }));
 
 import { collectMetadata } from './metadata.js';

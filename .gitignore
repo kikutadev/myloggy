@@ -40,3 +40,4 @@ app-update.yml
 *.db
 
 coverage
+playwright-report

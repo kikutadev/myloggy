@@ -7,9 +7,11 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-  execFile: vi.fn((cmd: string, args: string[], callback: (err: Error | null, stdout: Buffer, stderr: Buffer) => void) => {
-    callback(null, Buffer.from(''), Buffer.from(''));
-  }),
+  default: {
+    execFile: vi.fn((cmd: string, args: string[], callback: (err: Error | null, stdout: Buffer, stderr: Buffer) => void) => {
+      callback(null, Buffer.from(''), Buffer.from(''));
+    }),
+  },
 }));
 
 vi.mock('node:fs/promises', () => ({
