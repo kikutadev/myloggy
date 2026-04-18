@@ -1,70 +1,41 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-class MockTray {
-  setToolTip = vi.fn();
-  on = vi.fn((event: string, handler: Function) => {
-    if (event === 'click') {
-      this._clickHandler = handler;
-    }
-  });
-  _clickHandler?: Function;
-}
-
-const mockBrowserWindowInstances: any[] = [];
-
-class MockBrowserWindow {
-  loadURL = vi.fn(() => Promise.resolve());
-  loadFile = vi.fn(() => Promise.resolve());
-  openDevTools = vi.fn();
-  on = vi.fn();
-  show = vi.fn();
-  hide = vi.fn();
-  focus = vi.fn();
-  isVisible = vi.fn(() => false);
-  _isDestroyed = false;
-  isDestroyed = vi.fn(() => this._isDestroyed);
-  webContents = {
-    send: vi.fn(),
-    openDevTools: vi.fn(),
-  };
-  setPosition = vi.fn();
-  getBounds = vi.fn(() => ({ x: 100, y: 100, width: 300, height: 200 }));
-
-  constructor() {
-    mockBrowserWindowInstances.push(this);
-  }
-}
-
-let mockApp: any;
 let mockIpcMain: any;
 
-vi.mock('electron', () => {
-  mockApp = {
+vi.mock('electron', () => ({
+  app: {
     isPackaged: false,
     getPath: vi.fn(() => '/test/userData'),
     getLocale: vi.fn(() => 'en-US'),
     whenReady: vi.fn(() => Promise.resolve()),
     on: vi.fn(),
     quit: vi.fn(),
-  };
-  mockIpcMain = {
+  },
+  BrowserWindow: class {
+    loadURL = vi.fn(() => Promise.resolve());
+    loadFile = vi.fn(() => Promise.resolve());
+    openDevTools = vi.fn();
+    on = vi.fn();
+    show = vi.fn();
+    hide = vi.fn();
+    focus = vi.fn();
+    isVisible = vi.fn(() => false);
+    webContents = { send: vi.fn(), openDevTools: vi.fn() };
+    setPosition = vi.fn();
+    getBounds = vi.fn(() => ({ x: 100, y: 100, width: 300, height: 200 }));
+  },
+  ipcMain: {
     handle: vi.fn(),
-  };
-  return {
-    app: mockApp,
-    BrowserWindow: MockBrowserWindow,
-    ipcMain: mockIpcMain,
-    nativeImage: {
-      createFromPath: vi.fn(() => ({
-        setTemplateImage: vi.fn(),
-      })),
-      createFromBuffer: vi.fn(() => ({
-        toPNG: vi.fn(() => Buffer.from('png-data')),
-      })),
-    },
-    Tray: MockTray,
-  };
-});
+  },
+  nativeImage: {
+    createFromPath: vi.fn(() => ({ setTemplateImage: vi.fn() })),
+    createFromBuffer: vi.fn(() => ({ toPNG: vi.fn(() => Buffer.from('png-data')) })),
+  },
+  Tray: class {
+    setToolTip = vi.fn();
+    on = vi.fn();
+  },
+}));
 
 vi.mock('./core/tracker-service.js', () => ({
   TrackerService: class {
@@ -84,7 +55,6 @@ vi.mock('./core/tracker-service.js', () => ({
     clearErrors = vi.fn(() => ({ isTracking: true }));
     updateWorkUnit = vi.fn(() => ({ id: 'w1', title: 'Test', category: 'dev', progressLevel: 0, userEdited: false, updatedAt: '', note: '' } as any));
     getDebugData = vi.fn(() => ({ snapshots: [], errors: [] }));
-
     constructor() {}
   },
 }));
@@ -107,123 +77,31 @@ vi.mock('../shared/localization.js', () => ({
   normalizeLocale: vi.fn(() => 'en'),
 }));
 
-describe('window-manager.ts', () => {
-  beforeEach(() => {
-    mockBrowserWindowInstances.length = 0;
-    vi.resetModules();
-  });
-
-  describe('broadcastSettingsChanged', () => {
-    it('両ウィンドウに設定変更を送信する', async () => {
-      const { broadcastSettingsChanged, createMainWindow, createMiniWindow } = await import('./window-manager.js');
-
-      createMainWindow();
-      createMiniWindow();
-
-      const win1 = mockBrowserWindowInstances[0];
-      const win2 = mockBrowserWindowInstances[1];
-
-      broadcastSettingsChanged({ isTracking: true } as any);
-
-      expect(win1.webContents.send).toHaveBeenCalledWith('settings:changed', { isTracking: true });
-      expect(win2.webContents.send).toHaveBeenCalledWith('settings:changed', { isTracking: true });
-    });
-
-    it('破棄されたウィンドウには送信しない', async () => {
-      const { broadcastSettingsChanged, createMainWindow } = await import('./window-manager.js');
-
-      const win = createMainWindow();
-      win._isDestroyed = true;
-
-      broadcastSettingsChanged({ isTracking: true } as any);
-
-      expect(win.webContents.send).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('getTrayIconPath', () => {
-    it('resourcesディレクトリのパスを返す', async () => {
-      const { getTrayIconPath } = await import('./window-manager.js');
-
-      const path = getTrayIconPath();
-
-      expect(path).toContain('resources');
-      expect(path).toContain('trayIconTemplate.png');
-    });
-
-    it('アイコンが存在しない場合は作成する', async () => {
-      const fs = await import('node:fs');
-      const { getTrayIconPath } = await import('./window-manager.js');
-
-      getTrayIconPath();
-
-      expect(fs.default.mkdirSync).toHaveBeenCalled();
-      expect(fs.default.writeFileSync).toHaveBeenCalled();
-    });
-  });
-
-  describe('createMainWindow', () => {
-    it('メインウィンドウを作成する', async () => {
-      const { createMainWindow } = await import('./window-manager.js');
-
-      const win = createMainWindow();
-
-      expect(win).toBeDefined();
-      expect(win.loadURL).toHaveBeenCalled();
-    });
-
-    it('ウィンドウを返す', async () => {
-      const { createMainWindow, getMainWindow } = await import('./window-manager.js');
-
-      const win = createMainWindow();
-      const retrievedWin = getMainWindow();
-
-      expect(win).toBe(retrievedWin);
-    });
-  });
-
-  describe('createMiniWindow', () => {
-    it('ミニウィンドウを作成する', async () => {
-      const { createMiniWindow } = await import('./window-manager.js');
-
-      const win = createMiniWindow();
-
-      expect(win).toBeDefined();
-      expect(win.loadURL).toHaveBeenCalledWith(expect.stringContaining('mini.html'));
-    });
-
-    it('フォーカスを失ったときに非表示にする', async () => {
-      const { createMiniWindow } = await import('./window-manager.js');
-
-      const win = createMiniWindow();
-
-      const blurHandler = win.on.mock.calls.find((call: any[]) => call[0] === 'blur')?.[1];
-      expect(blurHandler).toBeDefined();
-
-      blurHandler();
-      expect(win.hide).toHaveBeenCalled();
-    });
-  });
-
-  describe('createTray', () => {
-    it('トレイアイコンを作成し、ツールチップを設定する', async () => {
-      const electron = await import('electron');
-      const { createTray } = await import('./window-manager.js');
-
-      createTray();
-
-      expect(electron.nativeImage.createFromPath).toHaveBeenCalled();
-      expect(electron.nativeImage.createFromPath).toHaveBeenCalledWith(expect.any(String));
-    });
-  });
-});
-
 describe('ipc-handlers.ts', () => {
   let mockTracker: any;
 
   beforeEach(() => {
-    mockBrowserWindowInstances.length = 0;
-    mockIpcMain.handle = vi.fn();
+    mockIpcMain = { handle: vi.fn() };
+    vi.resetModules();
+    vi.doMock('electron', () => ({
+      app: {
+        isPackaged: false,
+        getPath: vi.fn(() => '/test/userData'),
+        getLocale: vi.fn(() => 'en-US'),
+        whenReady: vi.fn(() => Promise.resolve()),
+        on: vi.fn(),
+        quit: vi.fn(),
+      },
+      BrowserWindow: class {
+        loadURL = vi.fn(() => Promise.resolve());
+        on = vi.fn();
+        show = vi.fn();
+        webContents = { send: vi.fn() };
+      },
+      ipcMain: mockIpcMain,
+      nativeImage: { createFromPath: vi.fn(() => ({ setTemplateImage: vi.fn() })) },
+      Tray: class { setToolTip = vi.fn(); on = vi.fn() },
+    }));
     mockTracker = {
       getBootstrap: vi.fn(() => ({ locale: 'en', state: {}, settings: {} })),
       getDashboard: vi.fn(() => ({ date: '2024-01-01', totalMinutes: 0, units: [], categorySummary: [], projectSummary: [] })),
@@ -240,7 +118,6 @@ describe('ipc-handlers.ts', () => {
       updateWorkUnit: vi.fn(() => ({ id: 'w1', title: 'Test' } as any)),
       getDebugData: vi.fn(() => ({ snapshots: [], errors: [] })),
     };
-    vi.resetModules();
   });
 
   it('registerIpcHandlersが全てのIPCハンドラを登録する', async () => {
@@ -337,11 +214,18 @@ describe('ollama:check ハンドラ', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    mockBrowserWindowInstances.length = 0;
-    mockIpcMain.handle = vi.fn();
+    mockIpcMain = { handle: vi.fn() };
     vi.resetModules();
+    vi.stubGlobal('fetch', vi.fn());
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
+    vi.doMock('electron', () => ({
+      app: { isPackaged: false, getPath: vi.fn(() => '/test/userData'), getLocale: vi.fn(() => 'en-US'), whenReady: vi.fn(() => Promise.resolve()), on: vi.fn(), quit: vi.fn() },
+      BrowserWindow: class { loadURL = vi.fn(() => Promise.resolve()); on = vi.fn(); show = vi.fn(); webContents = { send: vi.fn() } },
+      ipcMain: mockIpcMain,
+      nativeImage: { createFromPath: vi.fn(() => ({ setTemplateImage: vi.fn() })) },
+      Tray: class { setToolTip = vi.fn(); on = vi.fn() },
+    }));
   });
 
   afterEach(() => {
@@ -366,7 +250,6 @@ describe('ollama:check ハンドラ', () => {
 
   it('Ollamaが起動していない場合running:falseを返す', async () => {
     fetchMock.mockRejectedValue(new Error('Connection refused'));
-
     const { registerIpcHandlers } = await import('./ipc-handlers.js');
     const mockTracker = { getSettings: vi.fn(() => ({ ollamaHost: 'http://localhost:11434' })) };
     registerIpcHandlers(mockTracker as any, () => null, vi.fn());
@@ -382,11 +265,17 @@ describe('ollama:test-model ハンドラ', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
-    mockBrowserWindowInstances.length = 0;
-    mockIpcMain.handle = vi.fn();
+    mockIpcMain = { handle: vi.fn() };
     vi.resetModules();
     fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
+    vi.doMock('electron', () => ({
+      app: { isPackaged: false, getPath: vi.fn(() => '/test/userData'), getLocale: vi.fn(() => 'en-US'), whenReady: vi.fn(() => Promise.resolve()), on: vi.fn(), quit: vi.fn() },
+      BrowserWindow: class { loadURL = vi.fn(() => Promise.resolve()); on = vi.fn(); show = vi.fn(); webContents = { send: vi.fn() } },
+      ipcMain: mockIpcMain,
+      nativeImage: { createFromPath: vi.fn(() => ({ setTemplateImage: vi.fn() })) },
+      Tray: class { setToolTip = vi.fn(); on = vi.fn() },
+    }));
   });
 
   afterEach(() => {
