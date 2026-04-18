@@ -677,7 +677,7 @@ function CategoryEditor(props: {
   );
 }
 
-function SettingsModal(props: {
+export function SettingsModal(props: {
   settings: AppSettings;
   currentLocale: SupportedLocale;
   onSaved: (settings: AppSettings) => void;
@@ -835,7 +835,7 @@ function SettingsModal(props: {
   );
 }
 
-function Onboarding(props: { onComplete: () => void }) {
+export function Onboarding(props: { onComplete: () => void }) {
   const { text } = useI18n();
   const [step, setStep] = useState(0);
   const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
