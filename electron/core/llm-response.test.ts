@@ -94,4 +94,83 @@ describe('normalizeCheckpointLlmOutput', () => {
     expect(parsed.confidence).toBe(0.51);
     expect(parsed.continuity).toBe('continue');
   });
+
+  it('handles empty string input', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput(''));
+    expect(parsed.project_name).toBe('Unknown');
+  });
+
+  it('handles null input', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput(null));
+    expect(parsed.project_name).toBe('Unknown');
+  });
+
+  it('handles undefined input', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput(undefined));
+    expect(parsed.project_name).toBe('Unknown');
+  });
+
+  it('handles plain array input', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput([{ project_name: 'test' }]));
+    expect(parsed.project_name).toBe('test');
+  });
+
+  it('extracts JSON from response envelope', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
+      response: { output: { data: { project_name: 'envelope-test' } } },
+    }));
+    expect(parsed.project_name).toBe('envelope-test');
+  });
+
+  it('extracts JSON from content envelope', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
+      content: { project_name: 'content-envelope' },
+    }));
+    expect(parsed.project_name).toBe('content-envelope');
+  });
+
+  it('parses nested JSON in string', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput('{"response":{"project_name":"nested-string"}}'));
+    expect(parsed.project_name).toBe('nested-string');
+  });
+
+  it('handles confidence as string with decimals', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ confidence: '0.85' }));
+    expect(parsed.confidence).toBe(0.85);
+  });
+
+  it('does not clamp confidence > 1 (schema does clamping)', () => {
+    const output = normalizeCheckpointLlmOutput({ confidence: 1.5 });
+    expect(output.confidence).toBe(1.5);
+  });
+
+  it('handles is_distracted as string', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ is_distracted: 'true' }));
+    expect(parsed.is_distracted).toBe(true);
+  });
+
+  it('handles is_distracted as numeric non-zero', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ is_distracted: 1 }));
+    expect(parsed.is_distracted).toBe(true);
+  });
+
+  it('handles is_distracted as zero', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ is_distracted: 0 }));
+    expect(parsed.is_distracted).toBe(false);
+  });
+
+  it('handles continuity in Japanese', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ continuity: '継続' }));
+    expect(parsed.continuity).toBe('continue');
+  });
+
+  it('handles continuity as switch in Japanese', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ continuity: '切り替' }));
+    expect(parsed.continuity).toBe('switch');
+  });
+
+  it('handles continuity as unclear in Japanese', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({ continuity: '判断不能' }));
+    expect(parsed.continuity).toBe('unclear');
+  });
 });

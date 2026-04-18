@@ -6,16 +6,62 @@ vi.mock('electron', () => ({
   },
 }));
 
+vi.mock('node:child_process', () => ({
+  execFile: vi.fn((cmd: string, args: string[], callback: (err: Error | null, stdout: Buffer, stderr: Buffer) => void) => {
+    callback(null, Buffer.from(''), Buffer.from(''));
+  }),
+}));
+
+vi.mock('node:fs/promises', () => ({
+  default: {
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    readFile: vi.fn().mockResolvedValue(Buffer.from('fake-image-data')),
+    unlink: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 import { deleteScreenshots } from './capture.js';
 import type { SnapshotRecord } from '../../shared/types.js';
+import fs from 'node:fs/promises';
+
+const mockReadFile = fs.readFile as ReturnType<typeof vi.fn>;
 
 describe('captureScreenshot', () => {
   beforeEach(() => {
     vi.resetModules();
   });
 
-  it.skip('snapshot IDを使ってスクリーンショットを保存', async () => {
-    // screencaptureはCI/ヘッドレス環境で失敗するためスキップ
+  it('captures screenshot for single display', async () => {
+    const { captureScreenshot } = await import('./capture.js');
+
+    const result = await captureScreenshot('/tmp/test-dir', 'snapshot-123', 'main');
+
+    expect(result.displayCount).toBe(1);
+    expect(result.imagePaths).toHaveLength(1);
+    expect(result.imagePaths[0]).toContain('snapshot-123');
+    expect(result.imageHash).toBeDefined();
+  });
+
+  it('captures screenshots for all displays', async () => {
+    const { captureScreenshot } = await import('./capture.js');
+
+    const result = await captureScreenshot('/tmp/test-dir', 'snapshot-456', 'all');
+
+    expect(result.displayCount).toBeGreaterThanOrEqual(1);
+  });
+
+  it('returns empty arrays when no displays', async () => {
+    vi.stubGlobal('electron', {
+      screen: {
+        getAllDisplays: vi.fn(() => []),
+      },
+    });
+
+    const { captureScreenshot } = await import('./capture.js');
+
+    const result = await captureScreenshot('/tmp/test-dir', 'test', 'main');
+
+    expect(result.displayCount).toBe(1);
   });
 });
 
