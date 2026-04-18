@@ -141,6 +141,8 @@ export interface DashboardData {
 
 export type ExcludedCaptureMode = 'skip' | 'log_only';
 
+export type LlmProvider = 'ollama' | 'lmstudio';
+
 export interface TimeBlock {
   start: string;
   end: string;
@@ -152,6 +154,8 @@ export interface AppSettings {
   checkIntervalMinutes: number;
   llmModel: string;
   ollamaHost: string;
+  llmProvider: LlmProvider;
+  lmstudioHost: string;
   displayCaptureMode: DisplayCaptureMode;
   language?: SupportedLocale;
   excludedApps: string[];

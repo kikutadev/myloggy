@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
+import { describe, it, expect } from 'vitest';
 
 import { z } from 'zod';
 
@@ -15,82 +14,84 @@ const checkpointSchema = z.object({
   is_distracted: z.boolean().default(false),
 });
 
-test('normalizes valid JSON string responses without changing their meaning', () => {
-  const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput(`
-    \`\`\`json
-    {
-      "project_name": "myloggy",
-      "task_label": "エラー調査",
-      "state_summary": "LLMレスポンスの不正型を確認している。",
-      "evidence": ["エラーログを確認した。", "正規化関数を見直した。"],
-      "continuity": "continue",
-      "confidence": 0.92,
-      "is_distracted": false
-    }
-    \`\`\`
-  `));
+describe('normalizeCheckpointLlmOutput', () => {
+  it('normalizes valid JSON string responses without changing their meaning', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput(`
+      \`\`\`json
+      {
+        "project_name": "myloggy",
+        "task_label": "エラー調査",
+        "state_summary": "LLMレスポンスの不正型を確認している。",
+        "evidence": ["エラーログを確認した。", "正規化関数を見直した。"],
+        "continuity": "continue",
+        "confidence": 0.92,
+        "is_distracted": false
+      }
+      \`\`\`
+    `));
 
-  assert.equal(parsed.project_name, 'myloggy');
-  assert.equal(parsed.task_label, 'エラー調査');
-  assert.deepEqual(parsed.evidence, ['エラーログを確認した。', '正規化関数を見直した。']);
-  assert.equal(parsed.continuity, 'continue');
-  assert.equal(parsed.confidence, 0.92);
-  assert.equal(parsed.is_distracted, false);
-});
+    expect(parsed.project_name).toBe('myloggy');
+    expect(parsed.task_label).toBe('エラー調査');
+    expect(parsed.evidence).toEqual(['エラーログを確認した。', '正規化関数を見直した。']);
+    expect(parsed.continuity).toBe('continue');
+    expect(parsed.confidence).toBe(0.92);
+    expect(parsed.is_distracted).toBe(false);
+  });
 
-test('normalizes structured object fields before the string schema parses them', () => {
-  const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
-    response: {
-      projectName: { value: 'aidrivensales' },
-      taskLabel: { text: 'PRレビュー' },
-      stateSummary: {
-        summary: '差分を確認している',
-        description: '関連コメントも読んでいる',
+  it('normalizes structured object fields before the string schema parses them', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
+      response: {
+        projectName: { value: 'aidrivensales' },
+        taskLabel: { text: 'PRレビュー' },
+        stateSummary: {
+          summary: '差分を確認している',
+          description: '関連コメントも読んでいる',
+        },
+        evidence: [
+          { text: 'PR画面を開いた' },
+          { title: '差分を確認した' },
+          { description: 'レビューコメントを確認した' },
+        ],
+        continuity: { value: 'switch' },
+        confidence: { score: '0.67' },
+        isDistracted: { value: 'false' },
       },
-      evidence: [
-        { text: 'PR画面を開いた' },
-        { title: '差分を確認した' },
-        { description: 'レビューコメントを確認した' },
-      ],
-      continuity: { value: 'switch' },
-      confidence: { score: '0.67' },
-      isDistracted: { value: 'false' },
-    },
-  }));
+    }));
 
-  assert.equal(parsed.project_name, 'aidrivensales');
-  assert.equal(parsed.task_label, 'PRレビュー');
-  assert.equal(parsed.state_summary, '差分を確認している / 関連コメントも読んでいる');
-  assert.deepEqual(parsed.evidence, [
-    'PR画面を開いた',
-    '差分を確認した',
-    'レビューコメントを確認した',
-  ]);
-  assert.equal(parsed.continuity, 'switch');
-  assert.equal(parsed.confidence, 0.67);
-  assert.equal(parsed.is_distracted, false);
-});
+    expect(parsed.project_name).toBe('aidrivensales');
+    expect(parsed.task_label).toBe('PRレビュー');
+    expect(parsed.state_summary).toBe('差分を確認している / 関連コメントも読んでいる');
+    expect(parsed.evidence).toEqual([
+      'PR画面を開いた',
+      '差分を確認した',
+      'レビューコメントを確認した',
+    ]);
+    expect(parsed.continuity).toBe('switch');
+    expect(parsed.confidence).toBe(0.67);
+    expect(parsed.is_distracted).toBe(false);
+  });
 
-test('normalizes the reproduced evidence object array that previously triggered five invalid_type errors', () => {
-  const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
-    response: JSON.stringify({
-      project_name: 'myloggy',
-      task_label: '再現確認',
-      state_summary: 'structured evidence を処理している',
-      evidence: [
-        { text: '項目1' },
-        { title: '項目2' },
-        { description: '項目3' },
-        { content: '項目4' },
-        { value: '項目5' },
-      ],
-      continuity: 'continue',
-      confidence: '0.51',
-      is_distracted: false,
-    }),
-  }));
+  it('normalizes the reproduced evidence object array that previously triggered five invalid_type errors', () => {
+    const parsed = checkpointSchema.parse(normalizeCheckpointLlmOutput({
+      response: JSON.stringify({
+        project_name: 'myloggy',
+        task_label: '再現確認',
+        state_summary: 'structured evidence を処理している',
+        evidence: [
+          { text: '項目1' },
+          { title: '項目2' },
+          { description: '項目3' },
+          { content: '項目4' },
+          { value: '項目5' },
+        ],
+        continuity: 'continue',
+        confidence: '0.51',
+        is_distracted: false,
+      }),
+    }));
 
-  assert.deepEqual(parsed.evidence, ['項目1', '項目2', '項目3', '項目4', '項目5']);
-  assert.equal(parsed.confidence, 0.51);
-  assert.equal(parsed.continuity, 'continue');
+    expect(parsed.evidence).toEqual(['項目1', '項目2', '項目3', '項目4', '項目5']);
+    expect(parsed.confidence).toBe(0.51);
+    expect(parsed.continuity).toBe('continue');
+  });
 });

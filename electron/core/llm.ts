@@ -136,30 +136,56 @@ export async function analyzeWindow(params: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), settings.analysisTimeoutMs);
 
-  try {
-    const response = await fetch(`${settings.ollamaHost}/api/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: settings.llmModel,
-        prompt,
-        stream: false,
-        format: 'json',
-        options: {
-          temperature: 0.1,
-        },
-        images,
-      }),
-    });
+  const isLmStudio = settings.llmProvider === 'lmstudio';
+  const baseUrl = isLmStudio ? settings.lmstudioHost : settings.ollamaHost;
+  const endpoint = isLmStudio ? '/v1/chat/completions' : '/api/generate';
 
-    if (!response.ok) {
-      throw new Error(`Ollama request failed with ${response.status}`);
+  try {
+    let response: Response;
+    if (isLmStudio) {
+      response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: settings.llmModel,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+        }),
+      });
+    } else {
+      response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: settings.llmModel,
+          prompt,
+          stream: false,
+          format: 'json',
+          options: {
+            temperature: 0.1,
+          },
+          images,
+        }),
+      });
     }
 
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(`${isLmStudio ? 'LM Studio' : 'Ollama'} request failed with ${response.status}`);
+    }
+
+    let data = await response.json();
+    if (isLmStudio && data && typeof data === 'object' && 'choices' in data && Array.isArray(data.choices)) {
+      const content = data.choices[0]?.message?.content;
+      if (typeof content === 'string') {
+        data = JSON.parse(content);
+      }
+    }
     const parsed = createCheckpointSchema(locale).parse(normalizeCheckpointLlmOutput(data));
 
     const startAt = snapshots[0]?.capturedAt ?? new Date().toISOString();

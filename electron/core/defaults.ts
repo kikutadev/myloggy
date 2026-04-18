@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   checkIntervalMinutes: 10,
   llmModel: 'gemma4:26b',
   ollamaHost: 'http://127.0.0.1:11434',
+  llmProvider: 'ollama',
+  lmstudioHost: 'http://127.0.0.1:1234',
   displayCaptureMode: 'all',
   excludedApps: [],
   excludedDomains: [],

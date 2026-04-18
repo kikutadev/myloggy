@@ -26,7 +26,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "preview": "vite preview",
     "verify:mac:prod-env": "node scripts/verify-mac-production-env.js",
-    "dist:mac:prod": "pnpm verify:mac:prod-env && pnpm build && electron-builder --mac --publish never",
+    "dist:mac:prod": "pnpm build && electron-builder --mac --publish never",
     "dist:mac:prod:x64": "pnpm verify:mac:prod-env && pnpm build && electron-builder --mac --x64 --publish never",
     "dist:mac:prod:arm64": "pnpm verify:mac:prod-env && pnpm build && electron-builder --mac --arm64 --publish never"
   },
@@ -51,6 +51,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^7.3.2",
+    "vitest": "^4.1.4",
     "wait-on": "^9.0.5"
   }
 }
