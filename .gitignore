@@ -1,44 +1,70 @@
+```
 # Dependencies
 node_modules/
+.pnpm-store/
+.npm/
+.yarn/
 
 # Build outputs
 dist/
-dist-electron/
-out/
-release/
+build/
+coverage/
+htmlcov/
+target/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.ENV
+.ENV.local
+.env
+.env.local
+.env.*
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-
-# macOS
+# OS generated files
 .DS_Store
-*.dmg
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Electron builder
-app-update.yml
-
-# IDE
+# Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
 
-# TypeScript
-*.tsbuildinfo
+# Testing
+.coverage
+coverage.xml
+*.cover
 
-# SQLite database files (local data)
-*.sqlite
-*.sqlite3
-*.db
+# Environment specific
+.env
+.env.local
+.env.*
+!docs/resources/eventkit-node/.env.example
 
-coverage
-playwright-report
-test-results
+# Package manager lock files (preserving existing patterns)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Distribution / packaging
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage*
+```
