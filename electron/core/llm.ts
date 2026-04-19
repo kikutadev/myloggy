@@ -10,7 +10,7 @@ import {
   type SupportedLocale,
 } from '../../shared/localization.js';
 import type { AppSettings, CheckpointRecord, SnapshotRecord } from '../../shared/types.js';
-import { normalizeCheckpointLlmOutput } from './llm-response.js';
+import { normalizeCheckpointLlmOutput, extractJsonBlock } from './llm-response.js';
 import { createId, trimText } from './utils.js';
 
 function createCheckpointSchema(locale: SupportedLocale) {
@@ -149,9 +149,18 @@ export async function analyzeWindow(params: {
   try {
     let response: Response;
     if (isLmStudio) {
+      const contentWithImages = images.length
+        ? [
+            { type: 'text', text: prompt },
+            ...images.map((img) => ({
+              type: 'image_url' as const,
+              image_url: { url: `data:image/png;base64,${img}` },
+            })),
+          ]
+        : prompt;
       console.log('[Analysis] LM Studio request body:', {
         model: settings.llmModel,
-        messages: [{ role: 'user', content: prompt.substring(0, 100) + '...' }],
+        messages: [{ role: 'user', content: typeof contentWithImages === 'string' ? contentWithImages.substring(0, 100) + '...' : '[content with images]' }],
         temperature: 0.1,
       });
       response = await fetch(requestUrl, {
@@ -162,7 +171,7 @@ export async function analyzeWindow(params: {
         signal: controller.signal,
         body: JSON.stringify({
           model: settings.llmModel,
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'user', content: contentWithImages }],
           temperature: 0.1,
         }),
       });
@@ -198,7 +207,7 @@ export async function analyzeWindow(params: {
     if (isLmStudio && data && typeof data === 'object' && 'choices' in data && Array.isArray(data.choices)) {
       const content = data.choices[0]?.message?.content;
       if (typeof content === 'string') {
-        data = JSON.parse(content);
+        data = JSON.parse(extractJsonBlock(content));
       }
     }
     const parsed = createCheckpointSchema(locale).parse(normalizeCheckpointLlmOutput(data));

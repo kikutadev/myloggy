@@ -143,6 +143,47 @@ it('handles error response with non-ok status', async () => {
       ).rejects.toThrow('Ollama request failed with 500');
     });
 
+    it('handles LM Studio response with markdown code block wrapper', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: `\`\`\`json
+{
+  "project_name": "myloggy",
+  "task_label": "エラー調査",
+  "state_summary": "エラーの原因を调查中",
+  "evidence": ["エラーログを確認した"],
+  "continuity": "continue",
+  "confidence": 0.9,
+  "is_distracted": false
+}
+\`\`\``,
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+      });
+
+      expect(result.projectName).toBe('myloggy');
+      expect(result.taskLabel).toBe('エラー調査');
+      expect(result.confidence).toBe(0.9);
+    });
+
     it('extracts image data from snapshots', async () => {
       const snapshotsWithImage: SnapshotRecord[] = [
         {

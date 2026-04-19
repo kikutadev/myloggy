@@ -1,3 +1,9 @@
+vi.mock('node:fs/promises', () => ({
+  default: {
+    readFile: vi.fn().mockResolvedValue(Buffer.from('fake-image-data')),
+  },
+}));
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AppSettings, SnapshotRecord } from '../../../shared/types.js';
 import { analyzeWindow } from '../llm.js';
@@ -30,6 +36,12 @@ const TEST_SNAPSHOT: SnapshotRecord = {
   excludedReason: null,
   metadataJson: null,
   checkpointId: null,
+};
+
+const TEST_SNAPSHOT_WITH_IMAGE: SnapshotRecord = {
+  ...TEST_SNAPSHOT,
+  id: 's2',
+  imagePath: '/test/screenshot.png',
 };
 
 function createSettings(provider: 'ollama' | 'lmstudio', overrides?: Partial<AppSettings>): AppSettings {
@@ -193,5 +205,31 @@ describe('LLM Provider 切替えた時の振る舞い', () => {
     expect(result.taskLabel).toBe('coding');
     expect(result.stateSummary).toBe('working on feature');
     expect(result.confidence).toBe(0.9);
+  });
+
+  it('LM Studio選択時、画像Base64がリクエストに含まれる', async () => {
+    const fetchMock = vi.mocked(fetch);
+    const settings = createSettings('lmstudio');
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: '{"project_name":"test","task_label":"test","state_summary":"test","evidence":[],"continuity":"unclear","confidence":0.5,"is_distracted":false}' } }],
+      }),
+    } as unknown as Response);
+
+    await analyzeWindow({ snapshots: [TEST_SNAPSHOT_WITH_IMAGE], settings, locale: 'en', previousCheckpoint: null });
+
+    const call = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(call[1].body as string);
+
+    expect(body).toHaveProperty('messages');
+    expect(body.messages[0].content).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'image_url',
+        }),
+      ])
+    );
   });
 });

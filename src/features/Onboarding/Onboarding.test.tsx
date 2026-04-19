@@ -69,4 +69,40 @@ describe('Onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start setup' }));
     expect(screen.getByText('Install Ollama')).toBeInTheDocument();
   });
+
+  it('should render 4 progress dots', () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    const dots = document.querySelectorAll('.onboarding-dot');
+    expect(dots).toHaveLength(4);
+  });
+
+  it('should have first dot active at step 0', () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    const dots = document.querySelectorAll('.onboarding-dot');
+    expect(dots[0]).toHaveClass('active');
+    expect(dots[1]).not.toHaveClass('active');
+    expect(dots[2]).not.toHaveClass('active');
+    expect(dots[3]).not.toHaveClass('active');
+  });
+
+  it('should navigate back from step 1 to step 0', () => {
+    render(
+      <I18nProvider locale="en">
+        <Onboarding onComplete={vi.fn()} />
+      </I18nProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Start setup' }));
+    expect(screen.getByText('Install Ollama')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByText(/My Loggy/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start setup' })).toBeInTheDocument();
+  });
 });
