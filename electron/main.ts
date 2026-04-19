@@ -39,7 +39,7 @@ app.whenReady().then(() => {
     tracker,
     () => mainWindow,
     (settings: AppSettings) => broadcastSettingsChanged(settings),
-    () => { mainWindow = createMainWindow(devServerUrl); }
+    () => { mainWindow = createMainWindow(devServerUrl); return mainWindow; }
   );
 });
 

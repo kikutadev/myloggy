@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import MiniApp from './MiniApp.js';
-import type { BootstrapPayload, AppState, WorkUnitRecord } from '../shared/types.js';
+import type { BootstrapPayload, AppState, WorkUnitRecord, DashboardData, AppSettings } from '../shared/types.js';
+import type { DesktopApi } from '../shared/api.js';
 
 const mockWorkUnit: WorkUnitRecord = {
   id: '1',
@@ -20,31 +21,81 @@ const mockWorkUnit: WorkUnitRecord = {
   note: null,
 };
 
+const mockAppState: AppState = {
+  isTracking: false,
+  isAnalyzing: false,
+  pendingSnapshots: 0,
+  pendingWindows: 0,
+  lastCaptureAt: null,
+  lastCheckpointAt: null,
+  lastError: null,
+  currentWorkUnit: null,
+};
+
+const mockDashboard: DashboardData = {
+  state: mockAppState,
+  today: { date: '2024-01-01', units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 },
+  week: { startDate: '2024-01-01', endDate: '2024-01-07', units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0, distractedCount: 0 },
+  month: { month: '2024-01', days: [], categorySummary: [], projectSummary: [], comment: '' },
+  recentUnits: [],
+  errors: [],
+};
+
+const mockSettings: AppSettings = {
+  isTracking: false,
+  captureIntervalMinutes: 15,
+  checkIntervalMinutes: 30,
+  llmModel: 'gemma4:26b',
+  ollamaHost: 'http://localhost:11434',
+  llmProvider: 'ollama',
+  lmstudioHost: 'http://localhost:1234',
+  displayCaptureMode: 'all',
+  language: 'ja',
+  excludedApps: [],
+  excludedDomains: [],
+  excludedTimeBlocks: [],
+  excludedCaptureMode: 'skip',
+  analysisTimeoutMs: 60000,
+  maxAnalysisRetries: 3,
+  idleGapMinutes: 5,
+  categories: [],
+  onboardingCompleted: true,
+};
+
 const createMockPayload = (overrides: Partial<AppState> = {}): BootstrapPayload => ({
   locale: 'ja',
   state: {
-    isTracking: false,
-    isAnalyzing: false,
-    pendingSnapshots: 0,
-    pendingWindows: 0,
-    lastCaptureAt: null,
-    lastCheckpointAt: null,
-    lastError: null,
-    currentWorkUnit: null,
+    ...mockAppState,
     ...overrides,
   },
-  settings: { language: 'auto', theme: 'light' },
-  dashboard: { date: '2024-01-01', items: [] },
+  settings: mockSettings,
+  dashboard: mockDashboard,
+});
+
+const createMockDesktopApi = (): DesktopApi => ({
+  bootstrap: vi.fn().mockResolvedValue(createMockPayload()),
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+  updateWorkUnit: vi.fn(),
+  analyzeNow: vi.fn(),
+  getDebugData: vi.fn(),
+  clearErrors: vi.fn(),
+  clearPendingSnapshots: vi.fn(),
+  checkOllama: vi.fn(),
+  testModel: vi.fn(),
+  toggleTracking: vi.fn().mockResolvedValue(mockAppState),
+  onSettingsChanged: vi.fn(),
+  getDashboard: vi.fn(),
+  getDayTimeline: vi.fn(),
+  getWeekTimeline: vi.fn(),
+  getMonthTimeline: vi.fn(),
+  captureNow: vi.fn(),
+  openDashboard: vi.fn(),
 });
 
 describe('MiniApp', () => {
   beforeEach(() => {
-    window.myloggy = {
-      bootstrap: vi.fn().mockResolvedValue(createMockPayload()),
-      toggleTracking: vi.fn().mockResolvedValue(undefined),
-      openDashboard: vi.fn(),
-      onSettingsChanged: vi.fn(() => () => {}),
-    } as typeof window.myloggy;
+    window.myloggy = createMockDesktopApi();
   });
 
   it('shows loading state when data is null', async () => {

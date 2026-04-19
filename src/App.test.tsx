@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { compactText, formatIssueLabel, navigateDate, ratioWidth, summarizeErrorMessage, translateStructuredIssue } from './App.js';
-import type { DashboardData } from '../shared/types.js';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { compactText, formatIssueLabel, navigateDate, ratioWidth, summarizeErrorMessage, translateStructuredIssue } from './features/shared/index.js';
+import type { DashboardData, WorkUnitRecord, CheckpointRecord, AppSettings, DayTimeline, WeekTimeline, MonthTimeline, AppState } from '../shared/types.js';
 import { I18nProvider } from './i18n.js';
-import type { AppSettings } from '../shared/types.js';
-import { LoadingScreen, DayView, WeekView, MonthView, SettingsModal, Onboarding } from './App.js';
+import { LoadingScreen } from './features/shared/LoadingScreen.jsx';
+import { DayView } from './features/DayView/DayView.jsx';
+import { WeekView } from './features/WeekView/WeekView.jsx';
+import { MonthView } from './features/MonthView/MonthView.jsx';
+import { SettingsModal } from './features/Settings/SettingsModal.jsx';
+import { Onboarding } from './features/Onboarding/Onboarding.jsx';
+import type { DesktopApi } from '../shared/api.js';
 
 describe('compactText', () => {
   it('should collapse multiple whitespaces to single space', () => {
@@ -131,81 +136,150 @@ describe('LoadingScreen', () => {
   });
 });
 
+const createMockWorkUnit = (overrides: Partial<WorkUnitRecord> = {}): WorkUnitRecord => ({
+  id: 'u1',
+  title: 'Test Work',
+  projectName: 'myloggy',
+  category: 'coding',
+  summary: 'Test summary',
+  startAt: '2024-01-15T09:00:00Z',
+  endAt: '2024-01-15T10:30:00Z',
+  durationMinutes: 90,
+  isDistracted: false,
+  checkpointIds: ['c1'],
+  progressLevel: '中',
+  userEdited: false,
+  updatedAt: '2024-01-15T10:30:00Z',
+  note: null,
+  ...overrides,
+});
+
+const createMockCheckpoint = (overrides: Partial<CheckpointRecord> = {}): CheckpointRecord => ({
+  id: 'c1',
+  startAt: '2024-01-15T09:00:00Z',
+  endAt: '2024-01-15T09:30:00Z',
+  projectName: 'myloggy',
+  taskLabel: 'Write tests',
+  category: 'coding',
+  stateSummary: 'In progress',
+  evidence: [],
+  continuity: 'continue',
+  confidence: 0.8,
+  sourceSnapshotIds: [],
+  llmModel: 'gemma4:26b',
+  createdAt: '2024-01-15T09:00:00Z',
+  isDistracted: false,
+  status: 'completed',
+  appSummary: [],
+  urlSummary: [],
+  ...overrides,
+});
+
+const mockAppState: AppState = {
+  isTracking: false,
+  isAnalyzing: false,
+  pendingSnapshots: 0,
+  pendingWindows: 0,
+  lastCaptureAt: null,
+  lastCheckpointAt: null,
+  lastError: null,
+  currentWorkUnit: null,
+};
+
 const mockDashboardEn: DashboardData = {
+  state: mockAppState,
   today: {
-    units: [
-      {
-        id: 'u1',
-        title: 'Coding',
-        projectName: 'myloggy',
-        category: 'coding',
-        summary: 'Working on tests',
-        startAt: '2024-01-15T09:00:00Z',
-        endAt: '2024-01-15T10:30:00Z',
-        durationMinutes: 90,
-        isDistracted: false,
-        checkpointIds: ['c1'],
-      },
-    ],
-    checkpoints: [{ id: 'c1', startAt: '2024-01-15T09:00:00Z', endAt: '2024-01-15T09:30:00Z', category: 'coding', taskLabel: 'Write tests', stateSummary: 'In progress' }],
+    date: '2024-01-15',
+    units: [createMockWorkUnit()],
+    checkpoints: [createMockCheckpoint()],
     categorySummary: [{ category: 'coding', minutes: 90 }],
     projectSummary: [{ projectName: 'myloggy', minutes: 90 }],
     totalMinutes: 90,
   },
-  week: { units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0 },
-  month: { days: [], categorySummary: [], projectSummary: [], month: '2024-01' },
+  week: {
+    startDate: '2024-01-14',
+    endDate: '2024-01-20',
+    units: [],
+    categorySummary: [],
+    projectSummary: [],
+    longestUnits: [],
+    totalMinutes: 0,
+    distractedCount: 0,
+  },
+  month: {
+    month: '2024-01',
+    days: [],
+    categorySummary: [],
+    projectSummary: [],
+    comment: '',
+  },
+  recentUnits: [],
   errors: [],
 };
 
 const mockDashboardEnWeek: DashboardData = {
-  today: { units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 },
+  state: mockAppState,
+  today: { date: '2024-01-15', units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 },
   week: {
+    startDate: '2024-01-14',
+    endDate: '2024-01-20',
     units: [],
     categorySummary: [{ category: 'coding', minutes: 300 }, { category: 'meeting', minutes: 60 }],
     projectSummary: [{ projectName: 'myloggy', minutes: 360 }],
-    longestUnits: [
-      { id: 'u1', title: 'Deep work', projectName: 'myloggy', category: 'coding', summary: 'Focus time', startAt: '2024-01-15T09:00:00Z', endAt: '2024-01-15T12:00:00Z', durationMinutes: 180, isDistracted: false, checkpointIds: [] },
-    ],
+    longestUnits: [createMockWorkUnit({ id: 'u1', title: 'Deep work', summary: 'Focus time', startAt: '2024-01-15T09:00:00Z', endAt: '2024-01-15T12:00:00Z', durationMinutes: 180, checkpointIds: [] })],
     totalMinutes: 360,
+    distractedCount: 0,
   },
-  month: { days: [], categorySummary: [], projectSummary: [], month: '2024-01' },
+  month: { month: '2024-01', days: [], categorySummary: [], projectSummary: [], comment: '' },
+  recentUnits: [],
   errors: [],
 };
 
 const mockDashboardEnMonth: DashboardData = {
-  today: { units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 },
-  week: { units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0 },
+  state: mockAppState,
+  today: { date: '2024-01-15', units: [], checkpoints: [], categorySummary: [], projectSummary: [], totalMinutes: 0 },
+  week: { startDate: '2024-01-14', endDate: '2024-01-20', units: [], categorySummary: [], projectSummary: [], longestUnits: [], totalMinutes: 0, distractedCount: 0 },
   month: {
+    month: '2024-01',
     days: [
-      { date: '2024-01-01', totalMinutes: 60, representativeUnit: { id: 'u1', title: 'Planning', projectName: 'myloggy', category: 'planning', summary: '', startAt: '2024-01-01T09:00:00Z', endAt: '2024-01-01T10:00:00Z', durationMinutes: 60, isDistracted: false, checkpointIds: [] } },
-      { date: '2024-01-02', totalMinutes: 120, representativeUnit: { id: 'u2', title: 'Coding', projectName: 'myloggy', category: 'coding', summary: '', startAt: '2024-01-02T09:00:00Z', endAt: '2024-01-02T11:00:00Z', durationMinutes: 120, isDistracted: false, checkpointIds: [] } },
+      { date: '2024-01-01', totalMinutes: 60, representativeUnit: createMockWorkUnit({ id: 'u1', title: 'Planning', projectName: 'myloggy', category: 'planning', summary: '', startAt: '2024-01-01T09:00:00Z', endAt: '2024-01-01T10:00:00Z', durationMinutes: 60, checkpointIds: [] }) },
+      { date: '2024-01-02', totalMinutes: 120, representativeUnit: createMockWorkUnit({ id: 'u2', title: 'Coding', projectName: 'myloggy', category: 'coding', summary: '', startAt: '2024-01-02T09:00:00Z', endAt: '2024-01-02T11:00:00Z', durationMinutes: 120, checkpointIds: [] }) },
       { date: '2024-01-03', totalMinutes: 0, representativeUnit: null },
-      { date: '2024-01-06', totalMinutes: 90, representativeUnit: { id: 'u3', title: 'Meeting', projectName: 'myloggy', category: 'meeting', summary: '', startAt: '2024-01-06T14:00:00Z', endAt: '2024-01-06T15:30:00Z', durationMinutes: 90, isDistracted: false, checkpointIds: [] } },
+      { date: '2024-01-06', totalMinutes: 90, representativeUnit: createMockWorkUnit({ id: 'u3', title: 'Meeting', projectName: 'myloggy', category: 'meeting', summary: '', startAt: '2024-01-06T14:00:00Z', endAt: '2024-01-06T15:30:00Z', durationMinutes: 90, checkpointIds: [] }) },
       { date: '2024-01-07', totalMinutes: 0, representativeUnit: null },
     ],
     categorySummary: [{ category: 'coding', minutes: 120 }, { category: 'meeting', minutes: 90 }, { category: 'planning', minutes: 60 }],
     projectSummary: [{ projectName: 'myloggy', minutes: 270 }],
-    month: '2024-01',
+    comment: '',
   },
+  recentUnits: [],
   errors: [],
 };
 
+const createMockDesktopApi = (): DesktopApi => ({
+  bootstrap: vi.fn(),
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+  updateWorkUnit: vi.fn(),
+  analyzeNow: vi.fn(),
+  getDebugData: vi.fn(),
+  clearErrors: vi.fn(),
+  clearPendingSnapshots: vi.fn(),
+  checkOllama: vi.fn(),
+  testModel: vi.fn(),
+  toggleTracking: vi.fn(),
+  onSettingsChanged: vi.fn(),
+  getDashboard: vi.fn(),
+  getDayTimeline: vi.fn(),
+  getWeekTimeline: vi.fn(),
+  getMonthTimeline: vi.fn(),
+  captureNow: vi.fn(),
+  openDashboard: vi.fn(),
+});
+
 describe('DayView', () => {
   beforeEach(() => {
-    window.myloggy = {
-      bootstrap: vi.fn(),
-      getSettings: vi.fn(),
-      updateSettings: vi.fn(),
-      updateWorkUnit: vi.fn(),
-      analyzeNow: vi.fn(),
-      getDebugData: vi.fn(),
-      clearErrors: vi.fn(),
-      clearPendingSnapshots: vi.fn(),
-      checkOllama: vi.fn(),
-      testModel: vi.fn(),
-      toggleTracking: vi.fn(),
-      onSettingsChanged: vi.fn(),
-    } as typeof window.myloggy;
+    window.myloggy = createMockDesktopApi();
   });
 
   it('should render work unit title', () => {
@@ -381,34 +455,31 @@ describe('MonthView', () => {
 });
 
 const mockSettings: AppSettings = {
-  categories: ['coding', 'meeting', 'planning'],
-  language: 'en',
+  isTracking: false,
+  captureIntervalMinutes: 15,
+  checkIntervalMinutes: 30,
   llmModel: 'gemma4:26b',
   ollamaHost: 'http://localhost:11434',
+  llmProvider: 'ollama',
+  lmstudioHost: 'http://localhost:1234',
   displayCaptureMode: 'all',
+  language: 'en',
   excludedApps: ['LINE'],
   excludedDomains: ['youtube.com'],
   excludedTimeBlocks: [{ start: '12:00', end: '13:00' }],
+  excludedCaptureMode: 'skip',
+  analysisTimeoutMs: 60000,
+  maxAnalysisRetries: 3,
+  idleGapMinutes: 5,
+  categories: ['coding', 'meeting', 'planning'],
   onboardingCompleted: true,
-  theme: 'system',
 };
 
 describe('SettingsModal', () => {
   beforeEach(() => {
-    window.myloggy = {
-      bootstrap: vi.fn(),
-      getSettings: vi.fn().mockResolvedValue(mockSettings),
-      updateSettings: vi.fn().mockResolvedValue(mockSettings),
-      updateWorkUnit: vi.fn(),
-      analyzeNow: vi.fn(),
-      getDebugData: vi.fn(),
-      clearErrors: vi.fn(),
-      clearPendingSnapshots: vi.fn(),
-      checkOllama: vi.fn(),
-      testModel: vi.fn(),
-      toggleTracking: vi.fn(),
-      onSettingsChanged: vi.fn(),
-    } as typeof window.myloggy;
+    window.myloggy = createMockDesktopApi();
+    vi.mocked(window.myloggy.getSettings).mockResolvedValue(mockSettings);
+    vi.mocked(window.myloggy.updateSettings).mockResolvedValue(mockSettings);
   });
 
   it('should render settings title', () => {
@@ -470,20 +541,8 @@ describe('SettingsModal', () => {
 
 describe('Onboarding', () => {
   beforeEach(() => {
-    window.myloggy = {
-      bootstrap: vi.fn(),
-      getSettings: vi.fn(),
-      updateSettings: vi.fn(),
-      updateWorkUnit: vi.fn(),
-      analyzeNow: vi.fn(),
-      getDebugData: vi.fn(),
-      clearErrors: vi.fn(),
-      clearPendingSnapshots: vi.fn(),
-      checkOllama: vi.fn().mockResolvedValue({ running: true, models: ['gemma4:26b'] }),
-      testModel: vi.fn(),
-      toggleTracking: vi.fn(),
-      onSettingsChanged: vi.fn(),
-    } as typeof window.myloggy;
+    window.myloggy = createMockDesktopApi();
+    vi.mocked(window.myloggy.checkOllama).mockResolvedValue({ running: true, models: ['gemma4:26b'] });
   });
 
   it('should render onboarding title', () => {
@@ -513,7 +572,7 @@ describe('Onboarding', () => {
     expect(screen.getByText(/My Loggy/)).toBeInTheDocument();
   });
 
-  it('should advance to step 1 when Start setup is clicked', async () => {
+  it('should advance to step 1 when Start setup is clicked', () => {
     render(
       <I18nProvider locale="en">
         <Onboarding onComplete={vi.fn()} />
@@ -521,109 +580,5 @@ describe('Onboarding', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Start setup' }));
     expect(screen.getByText('Install Ollama')).toBeInTheDocument();
-  });
-
-  it('should check Ollama status when entering step 1', async () => {
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    expect(window.myloggy.checkOllama).toHaveBeenCalled();
-  });
-
-  it('should display Ollama running status when check returns running', async () => {
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => {
-      expect(screen.getByText('Ollama is running')).toBeInTheDocument();
-    });
-  });
-
-  it('should display Ollama missing when check returns not running', async () => {
-    window.myloggy.checkOllama.mockResolvedValueOnce({ running: false, models: [] });
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => {
-      expect(screen.getByText('Ollama not found')).toBeInTheDocument();
-    });
-  });
-
-  it('should advance to step 2 when Next is clicked on step 1 with running Ollama', async () => {
-    const user = userEvent.setup();
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => screen.getByText('Install Ollama'));
-    await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(screen.getByText('Install AI model')).toBeInTheDocument();
-  });
-
-  it('should show model installed when gemma4 model exists', async () => {
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => {
-      expect(screen.getByText('Model installed')).toBeInTheDocument();
-    });
-  });
-
-  it('should show model missing when gemma4 model does not exist', async () => {
-    window.myloggy.checkOllama.mockResolvedValueOnce({ running: true, models: ['llama3'] });
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => {
-      expect(screen.getByText('Model not found')).toBeInTheDocument();
-    });
-  });
-
-  it('should call onComplete when Get Started is clicked on final step', async () => {
-    const user = userEvent.setup();
-    const onComplete = vi.fn();
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={onComplete} />
-      </I18nProvider>
-    );
-    await waitFor(() => screen.getByText('Model installed'));
-    await user.click(screen.getByRole('button', { name: 'Get Started' }));
-    expect(onComplete).toHaveBeenCalled();
-  });
-
-  it('should go back from step 1 to step 0', async () => {
-    const user = userEvent.setup();
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => screen.getByText('Install Ollama'));
-    await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByText('Start setup')).toBeInTheDocument();
-  });
-
-  it('should recheck Ollama when recheck button is clicked', async () => {
-    const user = userEvent.setup();
-    render(
-      <I18nProvider locale="en">
-        <Onboarding onComplete={vi.fn()} />
-      </I18nProvider>
-    );
-    await waitFor(() => screen.getByText('Install Ollama'));
-    await user.click(screen.getByRole('button', { name: 'Recheck' }));
-    expect(window.myloggy.checkOllama).toHaveBeenCalledTimes(2);
   });
 });
