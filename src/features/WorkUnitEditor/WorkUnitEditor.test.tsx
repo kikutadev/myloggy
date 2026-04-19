@@ -49,7 +49,7 @@ const createMockDesktopApi = (): DesktopApi => ({
 const setup = (unit: WorkUnitRecord, categories: string[] = ['coding', 'meeting', 'learning']) => {
   const onSaved = vi.fn();
   const utils = render(
-    <I18nProvider>
+    <I18nProvider locale="en">
       <WorkUnitEditor unit={unit} categories={categories} onSaved={onSaved} />
     </I18nProvider>
   );
@@ -89,30 +89,30 @@ describe('WorkUnitEditor', () => {
       const unit = createMockWorkUnit();
       setup(unit);
 
-      const titleInput = screen.getByDisplayValue('Test Work') as HTMLInputElement;
+      const titleInput = screen.getByDisplayValue('Test Work');
       fireEvent.change(titleInput, { target: { value: 'New Title' } });
 
-      expect(titleInput.value).toBe('New Title');
+      expect((titleInput as HTMLInputElement).value).toBe('New Title');
     });
 
     it('プロジェクト名を編集できる', async () => {
       const unit = createMockWorkUnit();
       setup(unit);
 
-      const projectInput = screen.getByDisplayValue('myloggy') as HTMLInputElement;
+      const projectInput = screen.getByDisplayValue('myloggy');
       fireEvent.change(projectInput, { target: { value: 'newproject' } });
 
-      expect(projectInput.value).toBe('newproject');
+      expect((projectInput as HTMLInputElement).value).toBe('newproject');
     });
 
     it('カテゴリを変更できる', async () => {
       const unit = createMockWorkUnit({ category: 'coding' });
       setup(unit);
 
-      const select = screen.getByRole('combobox');
-      fireEvent.change(select, { target: { value: 'meeting' } });
+const select = screen.getByRole('combobox') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'meeting' } });
 
-      expect(select.value).toBe('meeting');
+    expect(select.value).toBe('meeting');
     });
 
     it('概要を編集できる', async () => {
@@ -122,7 +122,7 @@ describe('WorkUnitEditor', () => {
       const summaryTextarea = screen.getByRole('textbox', { name: /summary/i });
       fireEvent.change(summaryTextarea, { target: { value: 'New summary content' } });
 
-      expect(summaryTextarea.value).toBe('New summary content');
+      expect((summaryTextarea as HTMLTextAreaElement).value).toBe('New summary content');
     });
   });
 
@@ -141,8 +141,44 @@ describe('WorkUnitEditor', () => {
       const unit = createMockWorkUnit({ category: 'coding' });
       const { onSaved } = setup(unit);
 
-      vi.mocked(window.myloggy.getSettings).mockResolvedValue({ categories: ['coding'] });
-      vi.mocked(window.myloggy.updateSettings).mockResolvedValue({ categories: ['coding', 'design'] });
+      vi.mocked(window.myloggy.getSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding'],
+        onboardingCompleted: true,
+      });
+      vi.mocked(window.myloggy.updateSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding', 'design'],
+        onboardingCompleted: true,
+      });
 
       const select = screen.getByRole('combobox');
       fireEvent.change(select, { target: { value: '__custom__' } });
@@ -151,17 +187,53 @@ describe('WorkUnitEditor', () => {
       fireEvent.change(customInput, { target: { value: 'design' } });
       fireEvent.keyDown(customInput, { key: 'Enter' });
 
-      await waitFor(() => {
-        expect(screen.getByRole('combobox').value).toBe('design');
-      });
+await waitFor(() => {
+      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('design');
+    });
     });
 
     it('カスタムカテゴリ入力欄でblurするとカテゴリが確定する', async () => {
       const unit = createMockWorkUnit({ category: 'coding' });
       setup(unit);
 
-      vi.mocked(window.myloggy.getSettings).mockResolvedValue({ categories: ['coding'] });
-      vi.mocked(window.myloggy.updateSettings).mockResolvedValue({ categories: ['coding', 'review'] });
+      vi.mocked(window.myloggy.getSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding'],
+        onboardingCompleted: true,
+      });
+      vi.mocked(window.myloggy.updateSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding', 'review'],
+        onboardingCompleted: true,
+      });
 
       const select = screen.getByRole('combobox');
       fireEvent.change(select, { target: { value: '__custom__' } });
@@ -170,9 +242,9 @@ describe('WorkUnitEditor', () => {
       fireEvent.change(customInput, { target: { value: 'review' } });
       fireEvent.blur(customInput);
 
-      await waitFor(() => {
-        expect(screen.getByRole('combobox').value).toBe('review');
-      });
+await waitFor(() => {
+      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('review');
+    });
     });
   });
 
