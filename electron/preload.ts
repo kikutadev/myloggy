@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type { DesktopApi } from '../shared/api.js';
-import type { AppSettings, BootstrapPayload, DebugData, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
+import type { AppSettings, BootstrapPayload, DebugData, LmStudioStatus, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
 
 const api: DesktopApi = {
   bootstrap: (date: string) => ipcRenderer.invoke('bootstrap', date) as Promise<BootstrapPayload>,
@@ -29,6 +29,8 @@ const api: DesktopApi = {
   openDashboard: () => ipcRenderer.invoke('open-dashboard'),
   checkOllama: () => ipcRenderer.invoke('ollama:check') as Promise<OllamaStatus>,
   testModel: (params) => ipcRenderer.invoke('ollama:test-model', params),
+  checkLmstudio: () => ipcRenderer.invoke('lmstudio:check') as Promise<LmStudioStatus>,
+  testLmstudioModel: (params) => ipcRenderer.invoke('lmstudio:test-model', params),
   getDebugData: () => ipcRenderer.invoke('debug:data') as Promise<DebugData>,
 };
 

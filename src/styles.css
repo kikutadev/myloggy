@@ -478,6 +478,28 @@ textarea { resize: vertical; }
 
 .checkbox-row input { width: auto; }
 
+.settings-radio-group {
+  display: flex;
+  gap: 16px;
+}
+
+.settings-radio {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.settings-radio input { width: auto; }
+
+.settings-current-provider {
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .note {
   font-size: 0.85rem;
   color: var(--muted);

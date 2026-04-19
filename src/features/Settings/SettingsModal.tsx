@@ -33,6 +33,12 @@ const {
           <h2>{text.settings}</h2>
           <button className="btn btn-ghost" onClick={onClose}>✕</button>
         </div>
+        <div className="settings-current-provider">
+          {text.currentProvider(
+            draft.llmProvider === 'ollama' ? text.ollama : text.lmstudio,
+            draft.llmModel
+          )}
+        </div>
         <div className="settings-grid">
           <label className="full-span">
             {text.categories}
@@ -51,10 +57,40 @@ const {
               <option value="en">{text.languageEn}</option>
             </select>
           </label>
-          <label>Ollama Host<input value={draft.ollamaHost} onChange={(e) => {
-            setDraft({ ...draft, ollamaHost: e.target.value });
-            setModelCheck(null);
-          }} /></label>
+          <label className="full-span">
+            {text.llmProvider}
+            <div className="settings-radio-group">
+              <label className="settings-radio">
+                <input
+                  type="radio"
+                  name="llmProvider"
+                  checked={draft.llmProvider === 'ollama'}
+                  onChange={() => { setDraft({ ...draft, llmProvider: 'ollama' }); setModelCheck(null); }}
+                />
+                {text.ollama}
+              </label>
+              <label className="settings-radio">
+                <input
+                  type="radio"
+                  name="llmProvider"
+                  checked={draft.llmProvider === 'lmstudio'}
+                  onChange={() => { setDraft({ ...draft, llmProvider: 'lmstudio' }); setModelCheck(null); }}
+                />
+                {text.lmstudio}
+              </label>
+            </div>
+          </label>
+          {draft.llmProvider === 'ollama' ? (
+            <label>Ollama Host<input value={draft.ollamaHost} onChange={(e) => {
+              setDraft({ ...draft, ollamaHost: e.target.value });
+              setModelCheck(null);
+            }} /></label>
+          ) : (
+            <label>LM Studio Host<input value={draft.lmstudioHost} onChange={(e) => {
+              setDraft({ ...draft, lmstudioHost: e.target.value });
+              setModelCheck(null);
+            }} /></label>
+          )}
           <label>
             {text.model}
             <input value={draft.llmModel} onChange={(e) => {

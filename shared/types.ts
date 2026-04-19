@@ -174,6 +174,11 @@ export interface OllamaStatus {
   models: string[];
 }
 
+export interface LmStudioStatus {
+  running: boolean;
+  models: string[];
+}
+
 export interface ModelCheckResult {
   ok: boolean;
   message: string;

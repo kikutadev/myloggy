@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import type { AppSettings } from '../../../shared/types.js';
 import type { DesktopApi } from '../../../shared/api.js';
 import { I18nProvider } from '../../i18n.js';
@@ -37,6 +37,8 @@ const createMockDesktopApi = (): DesktopApi => ({
   clearPendingSnapshots: vi.fn(),
   checkOllama: vi.fn(),
   testModel: vi.fn(),
+  checkLmstudio: vi.fn(),
+  testLmstudioModel: vi.fn(),
   toggleTracking: vi.fn(),
   onSettingsChanged: vi.fn(),
   getDashboard: vi.fn(),
@@ -61,6 +63,25 @@ describe('SettingsModal', () => {
       </I18nProvider>
     );
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument();
+  });
+
+  it('should display current provider and model at top', () => {
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    expect(screen.getByText(/Ollama.*gemma4/)).toBeInTheDocument();
+  });
+
+  it('should display LM Studio when provider is lmstudio', () => {
+    const lmStudioSettings = { ...mockSettings, llmProvider: 'lmstudio' as const, llmModel: 'llama-3.1-8b' };
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={lmStudioSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    expect(screen.getByText(/LM Studio.*llama-3.1-8b/)).toBeInTheDocument();
   });
 
   it('should render categories section', () => {
@@ -108,5 +129,79 @@ describe('SettingsModal', () => {
     );
     const header = document.querySelector('.modal-header');
     expect(header?.querySelector('button')).toBeInTheDocument();
+  });
+
+  it('should add new category', async () => {
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    const categorySection = screen.getByText('Categories').parentElement;
+    const input = categorySection?.querySelector('input');
+    const addButton = categorySection?.querySelector('.category-add button');
+    fireEvent.change(input!, { target: { value: 'new-category' } });
+    fireEvent.click(addButton!);
+    expect(screen.getByText('new-category')).toBeInTheDocument();
+  });
+
+  it('should remove category', () => {
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    expect(screen.getByText('Development')).toBeInTheDocument();
+    const categorySection = screen.getByText('Categories').parentElement;
+    const deleteButton = categorySection?.querySelector('.category-item:first-child .category-actions button.btn-danger-text');
+    fireEvent.click(deleteButton!);
+    expect(screen.queryByText('Development')).not.toBeInTheDocument();
+  });
+
+  it('should add excluded app', async () => {
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    const inputs = screen.getAllByPlaceholderText('App name (e.g. LINE)');
+    const excludedAppInput = inputs[0];
+    fireEvent.change(excludedAppInput, { target: { value: 'Slack' } });
+    fireEvent.keyDown(excludedAppInput, { key: 'Enter' });
+    expect(screen.getByText('Slack')).toBeInTheDocument();
+  });
+
+  it('should save settings on save button click', () => {
+    const onSaved = vi.fn();
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={onSaved} onClose={vi.fn()} />
+      </I18nProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(window.myloggy.updateSettings).toHaveBeenCalled();
+  });
+
+  it('should call onClose when cancel button clicked', () => {
+    const onClose = vi.fn();
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={onClose} />
+      </I18nProvider>
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('should call onClose when overlay clicked', () => {
+    const onClose = vi.fn();
+    render(
+      <I18nProvider locale="en">
+        <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={onClose} />
+      </I18nProvider>
+    );
+    const overlay = document.querySelector('.modal-overlay');
+    fireEvent.click(overlay!);
+    expect(onClose).toHaveBeenCalled();
   });
 });

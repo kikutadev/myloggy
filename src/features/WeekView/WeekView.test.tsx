@@ -63,6 +63,8 @@ const createMockDesktopApi = (): DesktopApi => ({
   clearPendingSnapshots: vi.fn(),
   checkOllama: vi.fn(),
   testModel: vi.fn(),
+  checkLmstudio: vi.fn(),
+  testLmstudioModel: vi.fn(),
   toggleTracking: vi.fn(),
   onSettingsChanged: vi.fn(),
   getDashboard: vi.fn(),

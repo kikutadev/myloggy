@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { AppSettings, ModelCheckResult } from '../../../shared/types.js';
+import type { AppSettings, LlmProvider, ModelCheckResult } from '../../../shared/types.js';
 import { resolveLocalePreference } from '../../../shared/localization.js';
 import type { SupportedLocale } from '../../../shared/localization.js';
 
@@ -28,10 +28,18 @@ export function useSettings({ settings, currentLocale }: UseSettingsOptions) {
   async function testModel() {
     setCheckingModel(true);
     try {
-      const result = await window.myloggy.testModel({
-        model: draft.llmModel,
-        ollamaHost: draft.ollamaHost,
-      });
+      let result: ModelCheckResult;
+      if (draft.llmProvider === 'lmstudio') {
+        result = await window.myloggy.testLmstudioModel({
+          model: draft.llmModel,
+          lmstudioHost: draft.lmstudioHost,
+        });
+      } else {
+        result = await window.myloggy.testModel({
+          model: draft.llmModel,
+          ollamaHost: draft.ollamaHost,
+        });
+      }
       setModelCheck(result);
     } finally {
       setCheckingModel(false);

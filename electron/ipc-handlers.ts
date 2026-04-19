@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import type { TrackerService } from './core/tracker-service.js';
-import type { AppSettings } from '../shared/types.js';
+import type { AppSettings, LmStudioStatus, ModelCheckResult } from '../shared/types.js';
 
 export function registerIpcHandlers(
   tracker: TrackerService,
@@ -68,7 +68,56 @@ export function registerIpcHandlers(
 
       return { ok: true, message: 'Model responded successfully.' };
     } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'Model check failed.' };
+      const message = error instanceof Error ? error.message : 'Model check failed.';
+      if (message.includes('Connection refused') || message.includes('ECONNREFUSED')) {
+        return { ok: false, message: 'Ollamaが起動していない可能性があります。Ollamaを起動してください。' };
+      }
+      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+        return { ok: false, message: '接続がタイムアウトしました。ホスト地址を確認してください。' };
+      }
+      return { ok: false, message };
+    }
+  });
+  ipcMain.handle('lmstudio:check', async (): Promise<LmStudioStatus> => {
+    const settings = tracker.getSettings();
+    try {
+      const res = await fetch(`${settings.lmstudioHost}/v1/models`, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) return { running: false, models: [] };
+      const data = (await res.json()) as { data?: { id: string }[] };
+      const models = (data.data ?? []).map((m) => m.id);
+      return { running: true, models };
+    } catch {
+      return { running: false, models: [] };
+    }
+  });
+  ipcMain.handle('lmstudio:test-model', async (_event, params: { model: string; lmstudioHost: string }): Promise<ModelCheckResult> => {
+    try {
+      const res = await fetch(`${params.lmstudioHost}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify({
+          model: params.model,
+          messages: [{ role: 'user', content: 'Reply with OK.' }],
+          temperature: 0,
+        }),
+      });
+
+      const data = await res.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!res.ok) {
+        return { ok: false, message: data.error?.message ?? `HTTP ${res.status}` };
+      }
+
+      return { ok: true, message: 'Model responded successfully.' };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Model check failed.';
+      if (message.includes('Connection refused') || message.includes('ECONNREFUSED')) {
+        return { ok: false, message: 'LM Studioが起動していない可能性があります。LM Studioを起動してください。' };
+      }
+      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+        return { ok: false, message: '接続がタイムアウトしました。ホスト地址を確認してください。' };
+      }
+      return { ok: false, message };
     }
   });
 }

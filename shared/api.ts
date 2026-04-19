@@ -5,6 +5,7 @@ import type {
   DashboardData,
   DayTimeline,
   DebugData,
+  LmStudioStatus,
   ModelCheckResult,
   MonthTimeline,
   OllamaStatus,
@@ -31,5 +32,7 @@ export interface DesktopApi {
   openDashboard(): Promise<void>;
   checkOllama(): Promise<OllamaStatus>;
   testModel(params: { model: string; ollamaHost: string }): Promise<ModelCheckResult>;
+  checkLmstudio(): Promise<LmStudioStatus>;
+  testLmstudioModel(params: { model: string; lmstudioHost: string }): Promise<ModelCheckResult>;
   getDebugData(): Promise<DebugData>;
 }

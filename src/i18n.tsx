@@ -112,6 +112,13 @@ type UiText = {
   excludedCaptureMode: string;
   excludedCaptureModeSkip: string;
   excludedCaptureModeLogOnly: string;
+  llmProvider: string;
+  ollama: string;
+  lmstudio: string;
+  lmstudioRunning: string;
+  lmstudioMissing: string;
+  installLmstudioSub: string;
+  currentProvider: (provider: string, model: string) => string;
 };
 
 type I18nValue = {
@@ -232,6 +239,13 @@ function createText(locale: SupportedLocale): UiText {
       excludedCaptureMode: '除外時の動作',
       excludedCaptureModeSkip: 'スキップ（記録しない）',
       excludedCaptureModeLogOnly: 'ログのみ（AI処理しない）',
+      llmProvider: 'LLMプロバイダー',
+      ollama: 'Ollama',
+      lmstudio: 'LM Studio',
+      lmstudioRunning: 'LM Studio 起動中',
+      lmstudioMissing: 'LM Studio が見つかりません',
+      installLmstudioSub: 'またはlmstudio.aiからダウンロードしてください。',
+      currentProvider: (provider, model) => `現在の設定: ${provider} - ${model}`,
     };
   }
 
@@ -336,6 +350,13 @@ function createText(locale: SupportedLocale): UiText {
     excludedCaptureMode: 'Exclusion behavior',
     excludedCaptureModeSkip: 'Skip (do not record)',
     excludedCaptureModeLogOnly: 'Log only (skip AI analysis)',
+    llmProvider: 'LLM Provider',
+    ollama: 'Ollama',
+    lmstudio: 'LM Studio',
+    lmstudioRunning: 'LM Studio is running',
+    lmstudioMissing: 'LM Studio was not found',
+    installLmstudioSub: 'Or download it from lmstudio.ai.',
+    currentProvider: (provider, model) => `Current: ${provider} - ${model}`,
   };
 }
 
