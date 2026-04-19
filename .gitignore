@@ -68,3 +68,7 @@ yarn.lock
 .tox/
 .coverage*
 ```
+
+dist-electron
+playwright-report
+release
