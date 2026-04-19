@@ -80,19 +80,27 @@ export function registerIpcHandlers(
   });
   ipcMain.handle('lmstudio:check', async (): Promise<LmStudioStatus> => {
     const settings = tracker.getSettings();
+    const url = `${settings.lmstudioHost}/v1/models`;
+    console.log('[LM Studio] check request to:', url);
     try {
-      const res = await fetch(`${settings.lmstudioHost}/v1/models`, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      console.log('[LM Studio] check response status:', res.status);
       if (!res.ok) return { running: false, models: [] };
       const data = (await res.json()) as { data?: { id: string }[] };
       const models = (data.data ?? []).map((m) => m.id);
+      console.log('[LM Studio] available models:', models);
       return { running: true, models };
-    } catch {
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error('[LM Studio] check failed:', errMsg);
       return { running: false, models: [] };
     }
   });
   ipcMain.handle('lmstudio:test-model', async (_event, params: { model: string; lmstudioHost: string }): Promise<ModelCheckResult> => {
+    const url = `${params.lmstudioHost}/v1/chat/completions`;
+    console.log('[LM Studio] test-model request:', { url, model: params.model });
     try {
-      const res = await fetch(`${params.lmstudioHost}/v1/chat/completions`, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(30000),
@@ -103,21 +111,25 @@ export function registerIpcHandlers(
         }),
       });
 
+      console.log('[LM Studio] test-model response status:', res.status);
       const data = await res.json().catch(() => ({})) as { error?: { message?: string } };
       if (!res.ok) {
+        console.error('[LM Studio] test-model error response:', data);
         return { ok: false, message: data.error?.message ?? `HTTP ${res.status}` };
       }
 
+      console.log('[LM Studio] test-model success');
       return { ok: true, message: 'Model responded successfully.' };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Model check failed.';
-      if (message.includes('Connection refused') || message.includes('ECONNREFUSED')) {
+      const errMsg = error instanceof Error ? error.message : 'Model check failed.';
+      console.error('[LM Studio] test-model failed:', errMsg);
+      if (errMsg.includes('Connection refused') || errMsg.includes('ECONNREFUSED')) {
         return { ok: false, message: 'LM Studioが起動していない可能性があります。LM Studioを起動してください。' };
       }
-      if (message.includes('timeout') || message.includes('ETIMEDOUT')) {
+      if (errMsg.includes('timeout') || errMsg.includes('ETIMEDOUT')) {
         return { ok: false, message: '接続がタイムアウトしました。ホスト地址を確認してください。' };
       }
-      return { ok: false, message };
+      return { ok: false, message: errMsg };
     }
   });
 }

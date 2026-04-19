@@ -139,11 +139,22 @@ export async function analyzeWindow(params: {
   const isLmStudio = settings.llmProvider === 'lmstudio';
   const baseUrl = isLmStudio ? settings.lmstudioHost : settings.ollamaHost;
   const endpoint = isLmStudio ? '/v1/chat/completions' : '/api/generate';
+  const requestUrl = `${baseUrl}${endpoint}`;
+  console.log(`[Analysis] Request to ${isLmStudio ? 'LM Studio' : 'Ollama'}:`, {
+    url: requestUrl,
+    model: settings.llmModel,
+    provider: settings.llmProvider,
+  });
 
   try {
     let response: Response;
     if (isLmStudio) {
-      response = await fetch(`${baseUrl}${endpoint}`, {
+      console.log('[Analysis] LM Studio request body:', {
+        model: settings.llmModel,
+        messages: [{ role: 'user', content: prompt.substring(0, 100) + '...' }],
+        temperature: 0.1,
+      });
+      response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,6 +166,7 @@ export async function analyzeWindow(params: {
           temperature: 0.1,
         }),
       });
+      console.log('[Analysis] LM Studio response status:', response.status);
     } else {
       response = await fetch(`${baseUrl}${endpoint}`, {
         method: 'POST',
@@ -176,10 +188,13 @@ export async function analyzeWindow(params: {
     }
 
     if (!response.ok) {
+      const errBody = await response.text().catch(() => 'Unable to read error body');
+      console.error(`[Analysis] ${isLmStudio ? 'LM Studio' : 'Ollama'} request failed:`, response.status, errBody);
       throw new Error(`${isLmStudio ? 'LM Studio' : 'Ollama'} request failed with ${response.status}`);
     }
 
     let data = await response.json();
+    console.log('[Analysis] Raw response data (first 200 chars):', JSON.stringify(data).substring(0, 200));
     if (isLmStudio && data && typeof data === 'object' && 'choices' in data && Array.isArray(data.choices)) {
       const content = data.choices[0]?.message?.content;
       if (typeof content === 'string') {
@@ -212,6 +227,10 @@ export async function analyzeWindow(params: {
       appSummary,
       urlSummary,
     };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('[Analysis] Error:', errMsg);
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
