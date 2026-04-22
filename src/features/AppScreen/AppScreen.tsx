@@ -10,6 +10,7 @@ import { SettingsModal } from '../Settings/SettingsModal.jsx';
 import { DebugModal } from '../Debug/DebugModal.jsx';
 import { Onboarding } from '../Onboarding/Onboarding.jsx';
 import { useAnalyze } from './useAnalyze.js';
+import { useReanalyze } from '../DayView/useReanalyze.js';
 import { useClearSnapshots } from './useClearSnapshots.js';
 import { useClearErrors } from './useClearErrors.js';
 
@@ -47,10 +48,11 @@ export function AppScreen({
   const { locale, text, formatDateForView } = useI18n();
   const { dashboard, settings, state } = bootstrap;
   const { runningAnalyze, runAnalyzeNow } = useAnalyze(onReload);
+  const { runningReanalyze, reanalyzeDate } = useReanalyze(onReload);
   const { clearingPending, clearPendingSnapshots } = useClearSnapshots(onReload);
   const { clearingErrors, clearErrors } = useClearErrors(onReload);
 
-  const analyzeLocked = state.isAnalyzing || runningAnalyze;
+  const analyzeLocked = state.isAnalyzing || runningAnalyze || runningReanalyze;
   const latestAnalysisError = dashboard.errors.find((error) => error.scope === 'analysis') ?? null;
 
   if (!settings.onboardingCompleted) {
@@ -82,6 +84,19 @@ export function AppScreen({
           <span className="date-label">{formatDateForView(view, selectedDate)}</span>
           <button className="btn btn-ghost btn-icon" onClick={() => setSelectedDate(navigateDate(1, view, selectedDate))}>→</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setSelectedDate(today)}>{text.today}</button>
+          {view === 'day' ? (
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={analyzeLocked}
+              onClick={() => {
+                if (window.confirm(text.reanalyzeConfirm)) {
+                  void reanalyzeDate(selectedDate);
+                }
+              }}
+            >
+              {runningReanalyze ? text.reanalyzing : text.reanalyzeDay}
+            </button>
+          ) : null}
         </div>
         <div className="top-bar-right">
           <div className="top-bar-status">

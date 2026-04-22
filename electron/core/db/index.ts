@@ -228,4 +228,25 @@ export class AppDatabase {
   listAnalysisLogs(limit = 50): AnalysisLogRecord[] {
     return this.analysisLogsRepo.list(limit);
   }
+
+  resetAnalysisForDate(
+    startIso: string,
+    endIso: string,
+  ): {
+    resetSnapshots: number;
+    deletedCheckpoints: number;
+    deletedWorkUnits: number;
+  } {
+    this.conn.exec('BEGIN');
+    try {
+      const deletedWorkUnits = this.workUnitsRepo.deleteBetween(startIso, endIso);
+      const deletedCheckpoints = this.checkpointsRepo.deleteBetween(startIso, endIso);
+      const resetSnapshots = this.snapshotsRepo.resetProcessedBetween(startIso, endIso);
+      this.conn.exec('COMMIT');
+      return { resetSnapshots, deletedCheckpoints, deletedWorkUnits };
+    } catch (error) {
+      this.conn.exec('ROLLBACK');
+      throw error;
+    }
+  }
 }

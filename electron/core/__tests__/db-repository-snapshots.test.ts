@@ -140,4 +140,51 @@ describe('db/repositories/snapshots', () => {
     expect(snap?.imagePaths).toEqual(['/a.png', '/b.png']);
     expect(snap?.imagePath).toBe('/a.png');
   });
+
+  describe('resetProcessedBetween', () => {
+    it('resets processed snapshots to captured state within the date range', () => {
+      repo.insert(makeSnapshot('snap_1', { capturedAt: '2024-01-15T10:00:00Z', status: 'processed', checkpointId: 'cp_1' }));
+      repo.insert(makeSnapshot('snap_2', { capturedAt: '2024-01-15T14:00:00Z', status: 'processed', checkpointId: 'cp_2' }));
+      repo.insert(makeSnapshot('snap_3', { capturedAt: '2024-01-16T10:00:00Z', status: 'processed', checkpointId: 'cp_3' }));
+
+      const count = repo.resetProcessedBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(count).toBe(2);
+
+      const s1 = repo.getById('snap_1');
+      expect(s1?.status).toBe('captured');
+      expect(s1?.checkpointId).toBeNull();
+
+      const s2 = repo.getById('snap_2');
+      expect(s2?.status).toBe('captured');
+      expect(s2?.checkpointId).toBeNull();
+
+      const s3 = repo.getById('snap_3');
+      expect(s3?.status).toBe('processed');
+      expect(s3?.checkpointId).toBe('cp_3');
+    });
+
+    it('resets analysis_attempts to 0', () => {
+      repo.insert(makeSnapshot('snap_1', { capturedAt: '2024-01-15T10:00:00Z', status: 'processed', checkpointId: 'cp_1' }));
+      repo.incrementAnalysisAttempts(['snap_1']);
+      repo.markProcessed(['snap_1'], 'cp_1');
+
+      repo.resetProcessedBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      const s1 = repo.getById('snap_1');
+      expect(s1?.status).toBe('captured');
+      expect(s1?.checkpointId).toBeNull();
+    });
+
+    it('does not affect non-processed snapshots', () => {
+      repo.insert(makeSnapshot('snap_1', { capturedAt: '2024-01-15T10:00:00Z', status: 'captured' }));
+      repo.insert(makeSnapshot('snap_2', { capturedAt: '2024-01-15T11:00:00Z', status: 'analysis_failed' }));
+
+      const count = repo.resetProcessedBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(count).toBe(0);
+
+      const s1 = repo.getById('snap_1');
+      expect(s1?.status).toBe('captured');
+      const s2 = repo.getById('snap_2');
+      expect(s2?.status).toBe('analysis_failed');
+    });
+  });
 });

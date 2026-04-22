@@ -209,4 +209,44 @@ describe('db/AppDatabase Facade', () => {
     expect(windows).toHaveLength(1);
     expect(windows[0]).toHaveLength(2);
   });
+
+  describe('resetAnalysisForDate', () => {
+    it('resets snapshots, deletes checkpoints and work units atomically', () => {
+      db.insertSnapshot(makeSnapshot('snap_1', { capturedAt: '2024-01-15T10:00:00Z', status: 'processed', checkpointId: 'cp_1' }));
+      db.insertSnapshot(makeSnapshot('snap_2', { capturedAt: '2024-01-15T14:00:00Z', status: 'processed', checkpointId: 'cp_2' }));
+      db.insertSnapshot(makeSnapshot('snap_3', { capturedAt: '2024-01-16T10:00:00Z', status: 'processed', checkpointId: 'cp_3' }));
+      db.insertCheckpoint(makeCheckpoint('cp_1', { startAt: '2024-01-15T10:00:00Z', endAt: '2024-01-15T11:00:00Z' }));
+      db.insertCheckpoint(makeCheckpoint('cp_2', { startAt: '2024-01-15T14:00:00Z', endAt: '2024-01-15T15:00:00Z' }));
+      db.insertCheckpoint(makeCheckpoint('cp_3', { startAt: '2024-01-16T10:00:00Z', endAt: '2024-01-16T11:00:00Z' }));
+      db.insertWorkUnit(makeWorkUnit('wu_1', { startAt: '2024-01-15T10:00:00Z', endAt: '2024-01-15T11:00:00Z' }));
+      db.insertWorkUnit(makeWorkUnit('wu_2', { startAt: '2024-01-15T14:00:00Z', endAt: '2024-01-15T15:00:00Z' }));
+      db.insertWorkUnit(makeWorkUnit('wu_3', { startAt: '2024-01-16T10:00:00Z', endAt: '2024-01-16T11:00:00Z' }));
+
+      const result = db.resetAnalysisForDate('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(result.resetSnapshots).toBe(2);
+      expect(result.deletedCheckpoints).toBe(2);
+      expect(result.deletedWorkUnits).toBe(2);
+
+      const s1 = db.getSnapshotById('snap_1');
+      expect(s1?.status).toBe('captured');
+      expect(s1?.checkpointId).toBeNull();
+
+      const s3 = db.getSnapshotById('snap_3');
+      expect(s3?.status).toBe('processed');
+      expect(s3?.checkpointId).toBe('cp_3');
+
+      expect(db.listCheckpointsBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z')).toHaveLength(0);
+      expect(db.listCheckpointsBetween('2024-01-16T00:00:00Z', '2024-01-16T23:59:59Z')).toHaveLength(1);
+
+      expect(db.listWorkUnitsBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z')).toHaveLength(0);
+      expect(db.listWorkUnitsBetween('2024-01-16T00:00:00Z', '2024-01-16T23:59:59Z')).toHaveLength(1);
+    });
+
+    it('returns zero counts when no processed data exists for the date', () => {
+      const result = db.resetAnalysisForDate('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(result.resetSnapshots).toBe(0);
+      expect(result.deletedCheckpoints).toBe(0);
+      expect(result.deletedWorkUnits).toBe(0);
+    });
+  });
 });

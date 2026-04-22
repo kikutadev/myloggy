@@ -56,4 +56,16 @@ export class CheckpointRepository extends BaseRepository {
     );
     return row ? rowToCheckpoint(row) : null;
   }
+
+  deleteBetween(startIso: string, endIso: string): number {
+    const result = this.conn.prepare(
+      `
+      DELETE FROM checkpoints
+      WHERE start_at < ?
+        AND end_at >= ?
+        AND status = 'completed'
+      `
+    ).run(endIso, startIso);
+    return Number(result.changes ?? 0);
+  }
 }

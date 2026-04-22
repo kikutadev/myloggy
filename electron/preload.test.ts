@@ -88,6 +88,11 @@ describe('preload.ts', () => {
     expect(ipcRendererMock.invoke).toHaveBeenCalledWith('tracking:analyze-now');
   });
 
+  it('reanalyzeDateメソッドが正しいチャンネル名でinvokeする', async () => {
+    await exposedApi.reanalyzeDate('2024-06-15');
+    expect(ipcRendererMock.invoke).toHaveBeenCalledWith('tracking:reanalyze-date', '2024-06-15');
+  });
+
   it('clearPendingSnapshotsメソッドが正しいチャンネル名でinvokeする', async () => {
     await exposedApi.clearPendingSnapshots();
     expect(ipcRendererMock.invoke).toHaveBeenCalledWith('tracking:clear-pending');
@@ -179,6 +184,7 @@ describe('preload.ts', () => {
       'toggleTracking',
       'captureNow',
       'analyzeNow',
+      'reanalyzeDate',
       'clearPendingSnapshots',
       'clearErrors',
       'updateWorkUnit',

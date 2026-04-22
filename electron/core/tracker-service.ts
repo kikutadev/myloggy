@@ -170,6 +170,17 @@ export class TrackerService {
     return this.getState();
   }
 
+  async reanalyzeDate(date: string): Promise<AppState> {
+    const start = dayjs(date).startOf('day').toISOString();
+    const end = dayjs(date).endOf('day').toISOString();
+
+    const result = this.db.resetAnalysisForDate(start, end);
+    console.log('[Reanalyze]', date, result);
+
+    await this.analyzeReadyWindows(true);
+    return this.getState();
+  }
+
   async clearPendingSnapshots(): Promise<AppState> {
     const pending = this.db.clearPendingSnapshots();
     await deleteScreenshots(pending);

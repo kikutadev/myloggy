@@ -23,6 +23,7 @@ const api: DesktopApi = {
   toggleTracking: (enabled: boolean) => ipcRenderer.invoke('tracking:toggle', enabled),
   captureNow: () => ipcRenderer.invoke('tracking:capture-now'),
   analyzeNow: () => ipcRenderer.invoke('tracking:analyze-now'),
+  reanalyzeDate: (date: string) => ipcRenderer.invoke('tracking:reanalyze-date', date),
   clearPendingSnapshots: () => ipcRenderer.invoke('tracking:clear-pending'),
   clearErrors: () => ipcRenderer.invoke('tracking:clear-errors'),
   updateWorkUnit: (patch: WorkUnitPatch) => ipcRenderer.invoke('work-unit:update', patch),

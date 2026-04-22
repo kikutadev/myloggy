@@ -121,6 +121,9 @@ type UiText = {
   currentProvider: (provider: string, model: string) => string;
   autoCreateProject: string;
   autoCreateCategory: string;
+  reanalyzeDay: string;
+  reanalyzing: string;
+  reanalyzeConfirm: string;
 };
 
 type I18nValue = {
@@ -250,6 +253,9 @@ function createText(locale: SupportedLocale): UiText {
       currentProvider: (provider, model) => `現在の設定: ${provider} - ${model}`,
       autoCreateProject: 'プロジェクトの自動作成',
       autoCreateCategory: 'カテゴリの自動作成',
+      reanalyzeDay: 'この日を再解析',
+      reanalyzing: '再解析中...',
+      reanalyzeConfirm: 'この日のAI解析結果を削除して再実行しますか？手動編集したワークログの内容も失われます。',
     };
   }
 
@@ -363,6 +369,9 @@ function createText(locale: SupportedLocale): UiText {
       currentProvider: (provider, model) => `Current: ${provider} - ${model}`,
       autoCreateProject: 'Auto-create projects',
       autoCreateCategory: 'Auto-create categories',
+      reanalyzeDay: 'Reanalyze this day',
+      reanalyzing: 'Reanalyzing...',
+      reanalyzeConfirm: 'Delete AI analysis results for this day and re-run? Manually edited work units will also be lost.',
     };
 }
 

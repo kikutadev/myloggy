@@ -154,4 +154,19 @@ export class SnapshotRepository extends BaseRepository {
       return Math.max(max, Number(row?.attempts ?? 0));
     }, 0);
   }
+
+  resetProcessedBetween(startIso: string, endIso: string): number {
+    const result = this.conn.prepare(
+      `
+      UPDATE snapshots
+      SET status = 'captured',
+          checkpoint_id = NULL,
+          analysis_attempts = 0
+      WHERE captured_at >= ?
+        AND captured_at <= ?
+        AND status = 'processed'
+      `
+    ).run(startIso, endIso);
+    return Number(result.changes ?? 0);
+  }
 }

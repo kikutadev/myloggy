@@ -92,6 +92,7 @@ const createMockDesktopApi = (): DesktopApi => ({
   updateSettings: vi.fn(),
   updateWorkUnit: vi.fn(),
   analyzeNow: vi.fn(),
+  reanalyzeDate: vi.fn(),
   getDebugData: vi.fn(),
   clearErrors: vi.fn(),
   clearPendingSnapshots: vi.fn(),

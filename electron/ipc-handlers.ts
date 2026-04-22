@@ -22,6 +22,7 @@ export function registerIpcHandlers(
   ipcMain.handle('tracking:toggle', (_event, enabled: boolean) => tracker.setTracking(enabled));
   ipcMain.handle('tracking:capture-now', () => tracker.captureNow());
   ipcMain.handle('tracking:analyze-now', () => tracker.analyzeNow());
+  ipcMain.handle('tracking:reanalyze-date', (_event, date: string) => tracker.reanalyzeDate(date));
   ipcMain.handle('tracking:clear-pending', () => tracker.clearPendingSnapshots());
   ipcMain.handle('tracking:clear-errors', () => tracker.clearErrors());
   ipcMain.handle('work-unit:update', (_event, patch) => tracker.updateWorkUnit(patch));

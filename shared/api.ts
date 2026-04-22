@@ -27,6 +27,7 @@ export interface DesktopApi {
   toggleTracking(enabled: boolean): Promise<AppState>;
   captureNow(): Promise<AppState>;
   analyzeNow(): Promise<AppState>;
+  reanalyzeDate(date: string): Promise<AppState>;
   clearPendingSnapshots(): Promise<AppState>;
   clearErrors(): Promise<AppState>;
   updateWorkUnit(patch: WorkUnitPatch): Promise<WorkUnitRecord | null>;

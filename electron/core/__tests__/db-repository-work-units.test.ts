@@ -108,4 +108,32 @@ describe('db/repositories/work-units', () => {
     const result = repo.patch({ id: 'wu_1', note: null });
     expect(result?.note).toBeNull();
   });
+
+  describe('deleteBetween', () => {
+    it('deletes work units within the date range', () => {
+      repo.insert(makeWorkUnit('wu_1', { startAt: '2024-01-15T10:00:00Z', endAt: '2024-01-15T11:00:00Z' }));
+      repo.insert(makeWorkUnit('wu_2', { startAt: '2024-01-15T14:00:00Z', endAt: '2024-01-15T15:00:00Z' }));
+      repo.insert(makeWorkUnit('wu_3', { startAt: '2024-01-16T10:00:00Z', endAt: '2024-01-16T11:00:00Z' }));
+
+      const count = repo.deleteBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(count).toBe(2);
+
+      const remaining = repo.listBetween('2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('wu_3');
+    });
+
+    it('deletes work units that span across the date boundary', () => {
+      repo.insert(makeWorkUnit('wu_1', { startAt: '2024-01-14T23:00:00Z', endAt: '2024-01-15T01:00:00Z' }));
+      repo.insert(makeWorkUnit('wu_2', { startAt: '2024-01-15T23:00:00Z', endAt: '2024-01-16T01:00:00Z' }));
+      repo.insert(makeWorkUnit('wu_3', { startAt: '2024-01-16T10:00:00Z', endAt: '2024-01-16T11:00:00Z' }));
+
+      const count = repo.deleteBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z');
+      expect(count).toBe(2);
+
+      const remaining = repo.listBetween('2024-01-01T00:00:00Z', '2024-12-31T23:59:59Z');
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('wu_3');
+    });
+  });
 });

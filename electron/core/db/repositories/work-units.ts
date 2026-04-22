@@ -122,4 +122,15 @@ export class WorkUnitRepository extends BaseRepository {
     const row = this._get('SELECT * FROM work_units ORDER BY end_at DESC LIMIT 1');
     return row ? rowToWorkUnit(row) : null;
   }
+
+  deleteBetween(startIso: string, endIso: string): number {
+    const result = this.conn.prepare(
+      `
+      DELETE FROM work_units
+      WHERE start_at < ?
+        AND end_at >= ?
+      `
+    ).run(endIso, startIso);
+    return Number(result.changes ?? 0);
+  }
 }
