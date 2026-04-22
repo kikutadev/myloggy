@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { AppSettings } from '../../../shared/types.js';
-import type { DesktopApi } from '../../../shared/api.js';
-import { I18nProvider } from '../../../i18n.js';
+import type { AppSettings } from '../../shared/types.js';
+import type { DesktopApi } from '../../shared/api.js';
+import { I18nProvider } from '../../i18n.js';
 import { useSettings } from './useSettings.js';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 
 const createMockDesktopApi = (): DesktopApi => ({

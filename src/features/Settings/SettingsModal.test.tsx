@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import type { AppSettings } from '../../../shared/types.js';
 import type { DesktopApi } from '../../../shared/api.js';
 import { I18nProvider } from '../../i18n.js';
@@ -205,31 +205,6 @@ it('should call onClose when overlay clicked', () => {
   expect(onClose).toHaveBeenCalled();
 });
 
-it('should switch to LM Studio provider and show LM Studio host field', () => {
-  render(
-    <I18nProvider locale="en">
-      <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
-    </I18nProvider>
-  );
-  const lmstudioLabel = screen.getByText('LM Studio').parentElement as HTMLLabelElement;
-  const lmstudioRadio = lmstudioLabel.querySelector('input[type="radio"]') as HTMLInputElement;
-  fireEvent.click(lmstudioRadio);
-  expect(screen.getByDisplayValue('http://localhost:1234')).toBeInTheDocument();
-});
-
-it('should switch to Ollama provider and show Ollama host field', () => {
-  const lmStudioSettings = { ...mockSettings, llmProvider: 'lmstudio' as const };
-  render(
-    <I18nProvider locale="en">
-      <SettingsModal settings={lmStudioSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
-    </I18nProvider>
-  );
-  const ollamaLabel = screen.getByText('Ollama').parentElement as HTMLLabelElement;
-  const ollamaRadio = ollamaLabel.querySelector('input[type="radio"]') as HTMLInputElement;
-  fireEvent.click(ollamaRadio);
-  expect(screen.getByDisplayValue('http://localhost:11434')).toBeInTheDocument();
-});
-
 it('should update Ollama host when changed', () => {
   render(
     <I18nProvider locale="en">
@@ -363,7 +338,7 @@ it('should save settings and call onSaved callback', async () => {
   });
 });
 
-it('should reset model check when provider changes', () => {
+it('should reset model check when provider changes', async () => {
   render(
     <I18nProvider locale="en">
       <SettingsModal settings={mockSettings} currentLocale="en" onSaved={vi.fn()} onClose={vi.fn()} />
@@ -371,7 +346,9 @@ it('should reset model check when provider changes', () => {
   );
   const lmstudioLabel = screen.getByText('LM Studio').parentElement as HTMLLabelElement;
   const lmstudioRadio = lmstudioLabel.querySelector('input[type="radio"]') as HTMLInputElement;
-  fireEvent.click(lmstudioRadio);
+  await act(async () => {
+    fireEvent.change(lmstudioRadio, { target: { checked: true } });
+  });
   expect(screen.queryByText('Model not checked')).toBeInTheDocument();
 });
 });

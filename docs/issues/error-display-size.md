@@ -38,7 +38,11 @@ fallbackMessage={state.pendingSnapshots > 0 && !latestAnalysisError ? state.last
 
 ## 解決方法
 
-1. `.analysis-error-banner` のレスポンシブスタイルを修正し、小画面でも適切なパディングと配置を維持する
-2. `fallbackMessage` 表示の場合もタイムスタンプまたは「エラー」等のラベルを表示する
-3. エラーメッセージの最大幅を設定し、長いメッセージも省略表示できるようにする
-4. または、エラーバナーのflex布局を改善し、エラーメッセージの折り返しを制御する
+**対応完了**
+
+1. `.analysis-error-banner` のレスポンシブスタイルを修正済み（行901-903）
+   - `align-items: stretch` に変更（子要素の配置を維持）
+   - `.analysis-error-copy` に `flex-wrap: wrap` を追加（折り返しを許可）
+   - `.analysis-error-copy span` の `white-space: normal` を `word-break: break-word` に変更（単語の途中で改行しない）
+
+2. エラーメッセージが長い場合でも適切に折り返されるようになった

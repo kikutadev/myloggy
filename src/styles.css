@@ -898,9 +898,9 @@ textarea { resize: vertical; }
 @media (max-width: 680px) {
   .workspace { padding: 16px; }
   .top-bar { padding: 8px 12px; min-height: 48px; }
-  .analysis-error-banner { padding: 10px 12px; align-items: flex-start; }
-  .analysis-error-copy { flex-direction: column; align-items: flex-start; }
-  .analysis-error-copy span { white-space: normal; }
+  .analysis-error-banner { padding: 10px 12px; align-items: stretch; }
+  .analysis-error-copy { flex-wrap: wrap; align-items: flex-start; }
+  .analysis-error-copy span { word-break: break-word; }
   .analysis-error-actions { width: 100%; justify-content: flex-end; }
   .work-unit { grid-template-columns: 1fr; }
   .work-heading { flex-direction: column; }

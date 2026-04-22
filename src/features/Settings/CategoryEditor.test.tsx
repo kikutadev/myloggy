@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import type { AppSettings } from '../../../shared/types.js';
-import type { DesktopApi } from '../../../shared/api.js';
+import type { DesktopApi } from '../../shared/api.js';
 import { I18nProvider } from '../../i18n.js';
 import { CategoryEditor } from './CategoryEditor.jsx';
 
@@ -49,33 +48,33 @@ describe('CategoryEditor', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development']} onChange={onChange} />
+        <CategoryEditor categories={['開発']} onChange={onChange} />
       </I18nProvider>
     );
     const input = screen.getByPlaceholderText('New category');
     fireEvent.change(input, { target: { value: 'Research' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
-    expect(onChange).toHaveBeenCalledWith(['Development', '調査・情報収集']);
+    expect(onChange).toHaveBeenCalledWith(['開発', '調査・情報収集']);
   });
 
   it('should add new category on Enter key', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development']} onChange={onChange} />
+        <CategoryEditor categories={['開発']} onChange={onChange} />
       </I18nProvider>
     );
     const input = screen.getByPlaceholderText('New category');
     fireEvent.change(input, { target: { value: 'Research' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(onChange).toHaveBeenCalledWith(['Development', '調査・情報収集']);
+    expect(onChange).toHaveBeenCalledWith(['開発', '調査・情報収集']);
   });
 
-  it('should not add duplicate category', () => {
+  it('should not add duplicate category when using stored label', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development']} onChange={onChange} />
+        <CategoryEditor categories={['開発']} onChange={onChange} />
       </I18nProvider>
     );
     const input = screen.getByPlaceholderText('New category');
@@ -88,11 +87,11 @@ describe('CategoryEditor', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development']} onChange={onChange} />
+        <CategoryEditor categories={['開発']} onChange={onChange} />
       </I18nProvider>
     );
     const input = screen.getByPlaceholderText('New category');
-    fireEvent.change(input, { target: { value: '   ' } });
+    fireEvent.change(input, { target: { value: ' ' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -101,42 +100,42 @@ describe('CategoryEditor', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development', 'Research']} onChange={onChange} />
+        <CategoryEditor categories={['開発', '調査・情報収集']} onChange={onChange} />
       </I18nProvider>
     );
     const deleteButtons = screen.getAllByText('✕');
     fireEvent.click(deleteButtons[0]);
-    expect(onChange).toHaveBeenCalledWith(['Research']);
+    expect(onChange).toHaveBeenCalledWith(['調査・情報収集']);
   });
 
   it('should move category up when up button clicked', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development', 'Research']} onChange={onChange} />
+        <CategoryEditor categories={['開発', '調査・情報収集']} onChange={onChange} />
       </I18nProvider>
     );
     const upButtons = screen.getAllByText('↑');
     fireEvent.click(upButtons[1]);
-    expect(onChange).toHaveBeenCalledWith(['Research', 'Development']);
+    expect(onChange).toHaveBeenCalledWith(['調査・情報収集', '開発']);
   });
 
   it('should move category down when down button clicked', () => {
     const onChange = vi.fn();
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development', 'Research']} onChange={onChange} />
+        <CategoryEditor categories={['開発', '調査・情報収集']} onChange={onChange} />
       </I18nProvider>
     );
     const downButtons = screen.getAllByText('↓');
     fireEvent.click(downButtons[0]);
-    expect(onChange).toHaveBeenCalledWith(['Research', 'Development']);
+    expect(onChange).toHaveBeenCalledWith(['調査・情報収集', '開発']);
   });
 
   it('should disable up button for first category', () => {
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development', 'Research']} onChange={vi.fn()} />
+        <CategoryEditor categories={['開発', '調査・情報収集']} onChange={vi.fn()} />
       </I18nProvider>
     );
     const upButtons = screen.getAllByText('↑');
@@ -146,7 +145,7 @@ describe('CategoryEditor', () => {
   it('should disable down button for last category', () => {
     render(
       <I18nProvider locale="en">
-        <CategoryEditor categories={['Development', 'Research']} onChange={vi.fn()} />
+        <CategoryEditor categories={['開発', '調査・情報収集']} onChange={vi.fn()} />
       </I18nProvider>
     );
     const downButtons = screen.getAllByText('↓');
