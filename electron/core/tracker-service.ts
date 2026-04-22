@@ -417,6 +417,27 @@ export class TrackerService {
           this.db.insertCheckpoint(checkpoint);
           this.attachCheckpointToWorkUnit(checkpoint);
           this.db.markSnapshotsProcessed(windowSnapshots.map((snapshot) => snapshot.id), checkpoint.id);
+
+          const checkpointSnapDir = path.join(this.baseDir, 'checkpoint-snaps', checkpoint.id);
+          fs.mkdirSync(checkpointSnapDir, { recursive: true });
+          for (const snapshot of windowSnapshots) {
+            const paths = snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : [];
+            const newPaths: string[] = [];
+            for (const p of paths) {
+              if (fs.existsSync(p)) {
+                const fileName = path.basename(p);
+                const newPath = path.join(checkpointSnapDir, fileName);
+                try {
+                  fs.copyFileSync(p, newPath);
+                  newPaths.push(newPath);
+                } catch { /* ignore copy errors */ }
+              }
+            }
+            if (newPaths.length > 0) {
+              this.db.updateSnapshotImagePaths(snapshot.id, newPaths);
+            }
+          }
+
           await deleteScreenshots(windowSnapshots);
           this.lastCheckpointAt = checkpoint.createdAt;
         } catch (error) {

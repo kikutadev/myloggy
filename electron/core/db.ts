@@ -421,6 +421,12 @@ export class AppDatabase {
     }
   }
 
+  updateSnapshotImagePaths(snapshotId: string, imagePaths: string[]): void {
+    this.db.prepare(
+      'UPDATE snapshots SET image_path = ?, image_paths_json = ? WHERE id = ?',
+    ).run(imagePaths[0] ?? null, JSON.stringify(imagePaths), snapshotId);
+  }
+
   getAnalysisAttempts(snapshotIds: string[]): number {
     const statement = this.db.prepare('SELECT MAX(analysis_attempts) AS attempts FROM snapshots WHERE id = ?');
     return snapshotIds.reduce((max, id) => {

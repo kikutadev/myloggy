@@ -1,0 +1,407 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: checkpoint-screenshots.spec.ts >> Checkpoint Screenshots >> CS002: Checkpoint screenshots are displayed in DayView
+- Location: e2e/checkpoint-screenshots.spec.ts:41:7
+
+# Error details
+
+```
+Error: electronApplication.evaluate: TypeError: A dynamic import callback was not specified.
+    at importModuleDynamicallyCallback (node:internal/modules/esm/utils:279:9)
+    at eval (eval at evaluate (:302:30), <anonymous>:2:18)
+    at UtilityScript.evaluate (<anonymous>:304:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - group "DevTools is now available in Japanese" [ref=e6]:
+      - generic [ref=e10]:
+        - alert [ref=e12]: DevTools is now available in Japanese
+        - generic [ref=e13]:
+          - button "Don't show again" [ref=e14]:
+            - generic: Don't show again
+          - button "Always match Chrome's language" [ref=e15]:
+            - generic: Always match Chrome's language
+          - button "Switch DevTools to Japanese" [ref=e16]:
+            - generic: Switch DevTools to Japanese
+      - generic "Close" [ref=e18]:
+        - button "Close" [ref=e19]
+    - generic [ref=e25]:
+      - navigation "Main toolbar" [ref=e26]:
+        - toolbar [ref=e27]:
+          - generic "Select an element in the page to inspect it" [ref=e28]:
+            - button "Select an element in the page to inspect it - ⌘ ⇧ C" [ref=e29]
+        - generic:
+          - tablist "Panels":
+            - generic "Elements" [ref=e32]:
+              - tab "Elements" [ref=e33]
+            - generic "Console" [ref=e34]:
+              - tab "Console" [ref=e35]
+            - generic "Sources" [ref=e36]:
+              - tab "Sources" [ref=e37]
+            - generic "Network" [ref=e38]:
+              - tab "Network" [ref=e39]
+            - generic "Performance" [ref=e40]:
+              - tab "Performance" [ref=e41]
+            - generic "Memory" [ref=e42]:
+              - tab "Memory" [ref=e43]
+            - generic "Application" [ref=e44]:
+              - tab "Application" [ref=e45]
+            - generic "Security" [ref=e46]:
+              - tab "Security" [ref=e47]
+          - button "More tabs" [ref=e49]
+        - toolbar [ref=e51]:
+          - generic:
+            - generic "Open Console to view 1 warning" [ref=e54]:
+              - button "Open Console to view 1 warning" [ref=e55]:
+                - generic [ref=e57]: "1"
+            - generic "Settings" [ref=e59]:
+              - button "Settings - F1 - ⇧ ?" [ref=e60]
+            - button "Customize and control DevTools" [ref=e62]:
+              - button "Customize and control DevTools" [ref=e63]
+      - tabpanel "Elements panel" [ref=e66]:
+        - generic "elements" [ref=e67]:
+          - generic [ref=e69]:
+            - generic [ref=e72]:
+              - generic:
+                - generic [ref=e73]:
+                  - generic "Switch to Accessibility Tree view" [ref=e74]:
+                    - button "Switch to Accessibility Tree view" [ref=e75]
+                  - main "DOM tree explorer" [ref=e77]:
+                    - tree "Page DOM" [ref=e81]:
+                      - treeitem "<!DOCTYPE html>" [ref=e82]:
+                        - generic [ref=e85]: <!DOCTYPE html>
+                      - treeitem "<html lang=\"ja\"> View source code This element has a scrollable overflow" [expanded] [ref=e87]:
+                        - generic [ref=e88]:
+                          - generic "<html lang=\"ja\">" [ref=e90]:
+                            - text: <html
+                            - generic [ref=e91]: lang="ja"
+                            - text: ">"
+                          - generic [ref=e93]:
+                            - generic "View source code" [ref=e94]:
+                              - generic [ref=e96]: view-source
+                            - generic "This element has a scrollable overflow" [ref=e97]:
+                              - generic [ref=e99]: scroll
+                      - group [ref=e100]:
+                        - treeitem "<head> Expand …</head>" [ref=e101]:
+                          - generic [ref=e103]:
+                            - generic "<head>" [ref=e104]
+                            - button "Expand" [ref=e106]
+                            - text: …
+                            - generic "</head>" [ref=e108]
+                        - treeitem "<body>" [expanded] [selected] [ref=e110]:
+                          - generic [ref=e111]:
+                            - generic "<body>" [ref=e113]
+                            - generic [ref=e117]: == $0
+                        - group [ref=e118]:
+                          - treeitem "<div id=\"root\"> Expand …</div>" [ref=e119]:
+                            - generic [ref=e121]:
+                              - generic "<div id=\"root\">" [ref=e122]:
+                                - text: <div
+                                - generic [ref=e123]: id="root"
+                                - text: ">"
+                              - button "Expand" [ref=e125]
+                              - text: …
+                              - generic "</div>" [ref=e127]
+                          - treeitem "<script type=\"module\" src=\"/src/main.tsx\"></script>" [ref=e129]:
+                            - generic [ref=e131]:
+                              - generic "<script type=\"module\" src=\"/src/main.tsx\">" [ref=e132]:
+                                - text: <script
+                                - generic [ref=e133]: type="module"
+                                - generic [ref=e134]:
+                                  - text: src="
+                                  - link "/src/main.tsx" [ref=e136]
+                                  - text: "\""
+                                - text: ">"
+                              - generic "</script>" [ref=e137]
+                          - treeitem "</body>" [ref=e139]:
+                            - generic "</body>" [ref=e142]
+                        - treeitem "</html>" [ref=e144]:
+                          - generic "</html>" [ref=e147]
+                - navigation "DOM tree breadcrumbs" [ref=e151]:
+                  - list [ref=e153]:
+                    - listitem [ref=e154]:
+                      - link "html" [ref=e155] [cursor=pointer]:
+                        - /url: "#"
+                        - generic [ref=e157]: html
+                    - listitem [ref=e158]:
+                      - link "body" [ref=e159] [cursor=pointer]:
+                        - /url: "#"
+                        - generic [ref=e161]: body
+            - generic [ref=e164]:
+              - navigation "Side panel toolbar" [ref=e165]:
+                - generic:
+                  - tablist:
+                    - generic "Styles" [ref=e166]:
+                      - tab "Styles" [ref=e167]
+                    - generic "Computed" [ref=e168]:
+                      - tab "Computed" [ref=e169]
+                    - generic "Layout" [ref=e170]:
+                      - tab "Layout" [ref=e171]
+                  - button "More tabs" [ref=e173]
+              - complementary "Side panel content" [ref=e175]:
+                - tabpanel "Styles panel" [ref=e176]:
+                  - generic [ref=e181]:
+                    - generic [ref=e183]:
+                      - toolbar [ref=e184]:
+                        - generic [ref=e185]:
+                          - generic:
+                            - textbox "Filter" [ref=e190]
+                            - generic "Toggle Element State" [ref=e191]:
+                              - button "Toggle Element State" [ref=e192]
+                            - generic "Element Classes" [ref=e194]:
+                              - button "Element Classes" [ref=e195]
+                            - generic "New Style Rule" [ref=e197]:
+                              - button "New Style Rule" [ref=e198]
+                            - generic "Toggle common rendering emulations" [ref=e201]:
+                              - button "Toggle common rendering emulations" [ref=e202]
+                            - generic "Show Computed Styles sidebar" [ref=e204]:
+                              - button "Show Computed Styles sidebar" [ref=e205]
+                      - list [ref=e207]:
+                        - listitem "element.style, css selector" [ref=e208]:
+                          - generic [ref=e210]:
+                            - generic [ref=e212]:
+                              - text: element.style
+                              - text: "{"
+                            - generic [ref=e213]:
+                              - generic:
+                                - tree
+                            - generic [ref=e214]: "}"
+                        - listitem "body, css selector" [ref=e215]:
+                          - button "<style>" [ref=e218] [cursor=pointer]:
+                            - generic: <style>
+                          - generic [ref=e219]:
+                            - generic [ref=e221]:
+                              - generic "CSS selector" [ref=e222]: body
+                              - text: "{"
+                            - tree [ref=e225]:
+                              - 'treeitem "CSS property name: background : CSS property value: var(--bg);" [ref=e226]':
+                                - text: background
+                                - generic [ref=e227]: ":"
+                                - 'generic "CSS property value: var(--bg)" [ref=e229]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e231]
+                                  - generic [ref=e234]:
+                                    - generic [ref=e235]: var
+                                    - text: (
+                                    - link "--bg" [ref=e237] [cursor=pointer]
+                                    - text: )
+                                - text: ;
+                            - generic [ref=e238]: "}"
+                        - 'listitem "html, body, #root, css selector" [ref=e239]':
+                          - button "<style>" [ref=e242] [cursor=pointer]:
+                            - generic: <style>
+                          - generic [ref=e243]:
+                            - generic [ref=e245]:
+                              - generic "CSS selector" [ref=e246]: "html, body, #root"
+                              - text: "{"
+                            - tree [ref=e249]:
+                              - 'treeitem "CSS property name: min-height : CSS property value: 100vh;" [ref=e250]':
+                                - text: min-height
+                                - generic [ref=e251]: ":"
+                                - 'generic "CSS property value: 100vh" [ref=e252]': 100vh
+                                - text: ;
+                            - generic [ref=e253]: "}"
+                        - listitem "*, css selector" [ref=e254]:
+                          - button "<style>" [ref=e257] [cursor=pointer]:
+                            - generic: <style>
+                          - generic [ref=e258]:
+                            - generic [ref=e260]:
+                              - generic "CSS selector" [ref=e261]: "*"
+                              - text: "{"
+                            - tree [ref=e264]:
+                              - 'treeitem "CSS property name: box-sizing : CSS property value: border-box;" [ref=e265]':
+                                - text: box-sizing
+                                - generic [ref=e266]: ":"
+                                - 'generic "CSS property value: border-box" [ref=e267]': border-box
+                                - text: ;
+                              - 'treeitem "CSS property name: margin : CSS property value: 0;" [ref=e268]':
+                                - text: margin
+                                - generic [ref=e269]: ":"
+                                - 'generic "CSS property value: 0" [ref=e271]': "0"
+                                - text: ;
+                            - generic [ref=e272]: "}"
+                        - listitem "body, css selector" [ref=e273]:
+                          - generic [ref=e274]: user agent stylesheet
+                          - generic [ref=e275]:
+                            - generic [ref=e277]:
+                              - generic "CSS selector" [ref=e278]: body
+                              - text: "{"
+                            - tree [ref=e281]:
+                              - 'treeitem "CSS property name: display : CSS property value: block;" [ref=e282]':
+                                - text: display
+                                - generic [ref=e283]: ":"
+                                - 'generic "CSS property value: block" [ref=e284]': block
+                                - text: ;
+                              - 'treeitem "CSS property name: margin : CSS property value: 8px;" [ref=e285]':
+                                - text: margin
+                                - generic [ref=e286]: ":"
+                                - 'generic "CSS property value: 8px" [ref=e288]': 8px
+                                - text: ;
+                            - generic [ref=e289]: "}"
+                        - generic [ref=e290]:
+                          - text: Inherited from
+                          - button "html" [ref=e294] [cursor=pointer]:
+                            - generic [ref=e295]: html
+                        - listitem ":root, css selector" [ref=e296]:
+                          - button "<style>" [ref=e299] [cursor=pointer]:
+                            - generic: <style>
+                          - generic [ref=e300]:
+                            - generic [ref=e302]:
+                              - generic "CSS selector" [ref=e303]: :root
+                              - text: "{"
+                            - tree [ref=e306]:
+                              - 'treeitem "CSS property name: color : CSS property value: #1a1f2e;" [ref=e307]':
+                                - text: color
+                                - generic [ref=e308]: ":"
+                                - 'generic "CSS property value: #1a1f2e" [ref=e309]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e311]
+                                  - text: "#1a1f2e"
+                                - text: ;
+                              - 'treeitem "CSS property name: background : CSS property value: #f4f5f7;" [ref=e313]':
+                                - text: background
+                                - generic [ref=e314]: ":"
+                                - 'generic "CSS property value: #f4f5f7" [ref=e316]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e318]
+                                  - text: "#f4f5f7"
+                                - text: ;
+                              - 'treeitem "CSS property name: font-family : CSS property value: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif;" [ref=e320]':
+                                - text: font-family
+                                - generic [ref=e321]: ":"
+                                - 'generic "CSS property value: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif" [ref=e322]': "-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif"
+                                - text: ;
+                              - 'treeitem "CSS property name: line-height : CSS property value: 1.5;" [ref=e323]':
+                                - text: line-height
+                                - generic [ref=e324]: ":"
+                                - 'generic "CSS property value: 1.5" [ref=e325]': "1.5"
+                                - text: ;
+                              - 'treeitem "CSS property name: font-weight : CSS property value: 400;" [ref=e326]':
+                                - text: font-weight
+                                - generic [ref=e327]: ":"
+                                - 'generic "CSS property value: 400" [ref=e328]': "400"
+                                - text: ;
+                              - 'treeitem "CSS property name: font-synthesis : CSS property value: none;" [ref=e329]':
+                                - text: font-synthesis
+                                - generic [ref=e330]: ":"
+                                - 'generic "CSS property value: none" [ref=e332]': none
+                                - text: ;
+                              - 'treeitem "CSS property name: text-rendering : CSS property value: optimizeLegibility;" [ref=e333]':
+                                - text: text-rendering
+                                - generic [ref=e334]: ":"
+                                - 'generic "CSS property value: optimizeLegibility" [ref=e335]': optimizeLegibility
+                                - text: ;
+                              - 'treeitem "CSS property name: -webkit-font-smoothing : CSS property value: antialiased;" [ref=e336]':
+                                - text: "-webkit-font-smoothing"
+                                - generic [ref=e337]: ":"
+                                - 'generic "CSS property value: antialiased" [ref=e338]': antialiased
+                                - text: ;
+                              - 'treeitem "CSS property name: --bg : CSS property value: #f4f5f7;" [ref=e339]':
+                                - text: "--bg"
+                                - generic [ref=e340]: ":"
+                                - 'generic "CSS property value: #f4f5f7" [ref=e341]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e343]
+                                  - text: "#f4f5f7"
+                                - text: ;
+                              - 'treeitem "CSS property name: --surface : CSS property value: #ffffff;" [ref=e345]':
+                                - text: "--surface"
+                                - generic [ref=e346]: ":"
+                                - 'generic "CSS property value: #ffffff" [ref=e347]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e349]
+                                  - text: "#ffffff"
+                                - text: ;
+                              - 'treeitem "CSS property name: --ink : CSS property value: #1a1f2e;" [ref=e351]':
+                                - text: "--ink"
+                                - generic [ref=e352]: ":"
+                                - 'generic "CSS property value: #1a1f2e" [ref=e353]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e355]
+                                  - text: "#1a1f2e"
+                                - text: ;
+                              - 'treeitem "CSS property name: --muted : CSS property value: #6b7280;" [ref=e357]':
+                                - text: "--muted"
+                                - generic [ref=e358]: ":"
+                                - 'generic "CSS property value: #6b7280" [ref=e359]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e361]
+                                  - text: "#6b7280"
+                                - text: ;
+                              - 'treeitem "CSS property name: --accent : CSS property value: #2563eb;" [ref=e363]':
+                                - text: "--accent"
+                                - generic [ref=e364]: ":"
+                                - 'generic "CSS property value: #2563eb" [ref=e365]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e367]
+                                  - text: "#2563eb"
+                                - text: ;
+                              - 'treeitem "CSS property name: --accent-soft : CSS property value: rgba(37, 99, 235, 0.08);" [ref=e369]':
+                                - text: "--accent-soft"
+                                - generic [ref=e370]: ":"
+                                - 'generic "CSS property value: rgba(37, 99, 235, 0.08)" [ref=e371]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e373]
+                                  - generic [ref=e375]:
+                                    - generic [ref=e376]: rgba
+                                    - text: (37, 99, 235, 0.08)
+                                - text: ;
+                              - 'treeitem "CSS property name: --danger : CSS property value: #dc2626;" [ref=e377]':
+                                - text: "--danger"
+                                - generic [ref=e378]: ":"
+                                - 'generic "CSS property value: #dc2626" [ref=e379]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e381]
+                                  - text: "#dc2626"
+                                - text: ;
+                              - 'treeitem "CSS property name: --line : CSS property value: rgba(0, 0, 0, 0.08);" [ref=e383]':
+                                - text: "--line"
+                                - generic [ref=e384]: ":"
+                                - 'generic "CSS property value: rgba(0, 0, 0, 0.08)" [ref=e385]':
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e387]
+                                  - generic [ref=e389]:
+                                    - generic [ref=e390]: rgba
+                                    - text: (0, 0, 0, 0.08)
+                                - text: ;
+                              - 'treeitem "CSS property name: --shadow : CSS property value: 0 1px 3px rgba(0, 0, 0, 0.06);" [ref=e391]':
+                                - text: "--shadow"
+                                - generic [ref=e392]: ":"
+                                - 'generic "CSS property value: 0 1px 3px rgba(0, 0, 0, 0.06)" [ref=e393]':
+                                  - text: 0 1px 3px
+                                  - generic "Open color picker. Shift + Click to change color format." [ref=e395]
+                                  - generic [ref=e397]:
+                                    - generic [ref=e398]: rgba
+                                    - text: (0, 0, 0, 0.06)
+                                - text: ;
+                              - 'treeitem "CSS property name: --radius : CSS property value: 8px;" [ref=e399]':
+                                - text: "--radius"
+                                - generic [ref=e400]: ":"
+                                - 'generic "CSS property value: 8px" [ref=e401]': 8px
+                                - text: ;
+                            - generic [ref=e402]: "}"
+                    - generic [ref=e406]:
+                      - generic [ref=e407]: margin
+                      - generic [ref=e408]: "0"
+                      - generic [ref=e409]: "0"
+                      - generic [ref=e410]:
+                        - generic [ref=e411]: border
+                        - generic [ref=e412]: "0"
+                        - generic [ref=e413]: "0"
+                        - generic [ref=e414]:
+                          - generic [ref=e415]: padding
+                          - generic [ref=e416]: "0"
+                          - generic [ref=e417]: "0"
+                          - generic [ref=e418]:
+                            - generic [ref=e419]: "1400"
+                            - generic [ref=e420]: ×
+                            - generic [ref=e421]: "1557.250"
+                          - generic [ref=e422]: "0"
+                          - generic [ref=e423]: "0"
+                        - generic [ref=e424]: "0"
+                        - generic [ref=e425]: "0"
+                      - generic [ref=e426]: "0"
+                      - generic [ref=e427]: "0"
+  - alert [ref=e429]: DevTools is undocked
+  - status
+```

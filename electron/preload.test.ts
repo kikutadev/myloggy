@@ -125,6 +125,11 @@ describe('preload.ts', () => {
     expect(ipcRendererMock.invoke).toHaveBeenCalledWith('debug:data');
   });
 
+  it('getCheckpointSnapshotsメソッドが正しいチャンネル名でinvokeする', async () => {
+    await exposedApi.getCheckpointSnapshots('cp-123');
+    expect(ipcRendererMock.invoke).toHaveBeenCalledWith('checkpoint:snapshots', 'cp-123');
+  });
+
   describe('onSettingsChanged', () => {
     it('settings:changedイベントに登録する', () => {
       const listener = vi.fn();
@@ -181,6 +186,7 @@ describe('preload.ts', () => {
       'checkOllama',
       'testModel',
       'getDebugData',
+      'getCheckpointSnapshots',
     ];
 
     it('DesktopApiの全メソッドが存在する', () => {

@@ -107,6 +107,7 @@ const createMockDesktopApi = (): DesktopApi => ({
   getMonthTimeline: vi.fn(),
   captureNow: vi.fn(),
   openDashboard: vi.fn(),
+  getCheckpointSnapshots: vi.fn(() => Promise.resolve([])),
 });
 
 describe('DayView', () => {

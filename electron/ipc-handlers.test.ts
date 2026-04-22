@@ -55,6 +55,7 @@ vi.mock('./core/tracker-service.js', () => ({
     clearErrors = vi.fn(() => ({ isTracking: true }));
     updateWorkUnit = vi.fn(() => ({ id: 'w1', title: 'Test', category: 'dev', progressLevel: 0, userEdited: false, updatedAt: '', note: '' } as any));
     getDebugData = vi.fn(() => ({ snapshots: [], errors: [] }));
+    getCheckpointSnapshots = vi.fn(() => []);
     constructor() {}
   },
 }));
@@ -117,6 +118,7 @@ describe('ipc-handlers.ts', () => {
       clearErrors: vi.fn(() => ({ isTracking: true })),
       updateWorkUnit: vi.fn(() => ({ id: 'w1', title: 'Test' } as any)),
       getDebugData: vi.fn(() => ({ snapshots: [], errors: [] })),
+      getCheckpointSnapshots: vi.fn(() => []),
     };
   });
 
@@ -141,6 +143,7 @@ describe('ipc-handlers.ts', () => {
       'work-unit:update',
       'open-dashboard',
       'debug:data',
+      'checkpoint:snapshots',
       'ollama:check',
       'ollama:test-model',
     ];
