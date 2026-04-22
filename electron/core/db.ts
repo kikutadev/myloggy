@@ -3,6 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
 import type {
+  AnalysisLogRecord,
   AppSettings,
   CheckpointRecord,
   ErrorLogRecord,
@@ -11,6 +12,7 @@ import type {
   WorkUnitRecord,
 } from '../../shared/types.js';
 import {
+  UNKNOWN_LABEL,
   isLegacyDistractedCategory,
   isUnknownLabel,
   toStoredCategoryLabel,
@@ -211,6 +213,22 @@ export class AppDatabase {
         scope TEXT NOT NULL,
         message TEXT NOT NULL,
         detail TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS analysis_logs (
+        id TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        locale TEXT NOT NULL,
+        prompt_text TEXT NOT NULL,
+        response_text TEXT,
+        parsed_json TEXT,
+        error TEXT,
+        snapshot_ids_json TEXT NOT NULL,
+        previous_checkpoint_id TEXT,
+        project_name_result TEXT,
+        duration_ms INTEGER
       );
     `);
     this.ensureColumn('snapshots', 'image_paths_json', 'TEXT');
@@ -660,5 +678,101 @@ patchWorkUnit(patch: WorkUnitPatch): WorkUnitRecord | null {
       .prepare("SELECT COUNT(*) AS total FROM snapshots WHERE checkpoint_id IS NULL AND status IN ('captured', 'analysis_failed')")
       .get() as Record<string, unknown>;
     return Number(row.total);
+  }
+
+  listKnownProjectNames(limit = 50): string[] {
+    const fromWorkUnits = this.db
+      .prepare(
+        `SELECT DISTINCT project_name FROM work_units
+         WHERE project_name != ?
+         ORDER BY updated_at DESC
+         LIMIT ?`,
+      )
+      .all(UNKNOWN_LABEL, limit) as { project_name: string }[];
+    const fromCategoryRules = this.db
+      .prepare('SELECT project_name FROM category_rules ORDER BY updated_at DESC')
+      .all() as { project_name: string }[];
+    const names = new Set<string>();
+    for (const row of fromWorkUnits) {
+      names.add(String(row.project_name));
+    }
+    for (const row of fromCategoryRules) {
+      names.add(String(row.project_name));
+    }
+    return [...names];
+  }
+
+  insertAnalysisLog(record: {
+    id?: string;
+    createdAt?: string;
+    provider: string;
+    model: string;
+    locale: string;
+    promptText: string;
+    responseText?: string | null;
+    parsedJson?: string | null;
+    error?: string | null;
+    snapshotIds: string[];
+    previousCheckpointId?: string | null;
+    projectNameResult?: string | null;
+    durationMs?: number | null;
+  }): AnalysisLogRecord {
+    const id = record.id ?? createId('alog');
+    const createdAt = record.createdAt ?? new Date().toISOString();
+    const payload: AnalysisLogRecord = {
+      id,
+      createdAt,
+      provider: record.provider,
+      model: record.model,
+      locale: record.locale,
+      promptText: record.promptText,
+      responseText: record.responseText ?? null,
+      parsedJson: record.parsedJson ?? null,
+      error: record.error ?? null,
+      snapshotIds: record.snapshotIds,
+      previousCheckpointId: record.previousCheckpointId ?? null,
+      projectNameResult: record.projectNameResult ?? null,
+      durationMs: record.durationMs ?? null,
+    };
+    this.run(
+      `INSERT INTO analysis_logs (
+        id, created_at, provider, model, locale, prompt_text, response_text, parsed_json, error,
+        snapshot_ids_json, previous_checkpoint_id, project_name_result, duration_ms
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      payload.id,
+      payload.createdAt,
+      payload.provider,
+      payload.model,
+      payload.locale,
+      payload.promptText,
+      payload.responseText,
+      payload.parsedJson,
+      payload.error,
+      JSON.stringify(payload.snapshotIds),
+      payload.previousCheckpointId,
+      payload.projectNameResult,
+      payload.durationMs,
+    );
+    return payload;
+  }
+
+  listAnalysisLogs(limit = 50): AnalysisLogRecord[] {
+    return (
+      this.db.prepare('SELECT * FROM analysis_logs ORDER BY created_at DESC LIMIT ?').all(limit) as Record<string, unknown>[]
+    ).map((row) => ({
+      id: String(row.id),
+      createdAt: String(row.created_at),
+      provider: String(row.provider),
+      model: String(row.model),
+      locale: String(row.locale),
+      promptText: String(row.prompt_text),
+      responseText: (row.response_text as string | null) ?? null,
+      parsedJson: (row.parsed_json as string | null) ?? null,
+      error: (row.error as string | null) ?? null,
+      snapshotIds: safeJsonParse<string[]>(row.snapshot_ids_json as string | null, []),
+      previousCheckpointId: (row.previous_checkpoint_id as string | null) ?? null,
+      projectNameResult: (row.project_name_result as string | null) ?? null,
+      durationMs: (row.duration_ms as number | null) ?? null,
+    }));
   }
 }

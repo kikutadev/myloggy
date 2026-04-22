@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import {
   UNKNOWN_LABEL,
+  isUnknownLabel,
   localizeInsufficientInfoSummary,
   localizeUnknownTaskLabel,
   toStoredProjectName,
@@ -12,6 +13,7 @@ import {
 import type { AppSettings, CheckpointRecord, SnapshotRecord } from '../../shared/types.js';
 import { normalizeCheckpointLlmOutput, extractJsonBlock } from './llm-response.js';
 import { createId, trimText } from './utils.js';
+import type { AppDatabase } from './db.js';
 
 function createCheckpointSchema(locale: SupportedLocale) {
   return z.object({
@@ -30,6 +32,7 @@ function buildPrompt(
   settings: AppSettings,
   previousCheckpoint: CheckpointRecord | null,
   locale: SupportedLocale,
+  knownProjects: string[],
 ): string {
   const snapshotLines = snapshots.map((snapshot, index) => {
     return [
@@ -65,6 +68,12 @@ continuity=${previousCheckpoint.continuity}
       ? 'previous_checkpoint: none'
       : 'previous_checkpoint: none';
 
+  const knownProjectsBlock = knownProjects.length
+    ? locale === 'ja'
+      ? `\n既知のプロジェクト:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\n上記に該当する場合はその project_name を使うこと。該当しない場合のみ「不明」にすること。\n`
+      : `\nKnown projects:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\nIf the activity matches one of the above, use that exact project_name. Only use "Unknown" if it does not match any known project.\n`
+    : '';
+
   if (locale === 'ja') {
     return `
 あなたはローカル作業ログアプリの分類器です。
@@ -72,12 +81,12 @@ continuity=${previousCheckpoint.continuity}
 過剰推測は禁止です。見えている事実を優先してください。
 
 ${previousBlock}
-
+${knownProjectsBlock}
 観測データ:
 ${snapshotLines.join('\n\n')}
 
 出力要件:
-- JSONのみを返す
+- 絶対にJSONのみを返すこと。前後に説明文やマークダウンの装飾（\`\`\`json など）を付けないこと
 - キーは project_name, task_label, state_summary, evidence, continuity, confidence, is_distracted
 - evidence は 2〜10件
 - task_label は短く具体的な自然な日本語
@@ -98,12 +107,12 @@ Your goal is to identify exactly one primary work activity from the last 10 minu
 Do not over-infer. Prioritize directly visible facts.
 
 ${previousBlock}
-
+${knownProjectsBlock}
 Observations:
 ${snapshotLines.join('\n\n')}
 
 Output requirements:
-- Return JSON only
+- You must return ONLY raw JSON. Do not include any explanatory text, markdown formatting, or code fences (such as \`\`\`json)
 - Use the keys project_name, task_label, state_summary, evidence, continuity, confidence, is_distracted
 - evidence must contain 2 to 10 items
 - task_label must be short, specific, and natural English
@@ -123,9 +132,12 @@ export async function analyzeWindow(params: {
   settings: AppSettings;
   locale: SupportedLocale;
   previousCheckpoint: CheckpointRecord | null;
+  knownProjects?: string[];
+  db?: AppDatabase;
 }): Promise<CheckpointRecord> {
-  const { snapshots, settings, locale, previousCheckpoint } = params;
-  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale);
+  const { snapshots, settings, locale, previousCheckpoint, knownProjects = [], db } = params;
+  const startTime = Date.now();
+  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects);
   const images = await Promise.all(
     snapshots
       .flatMap((snapshot) => (snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : []))
@@ -206,8 +218,18 @@ export async function analyzeWindow(params: {
     console.log('[Analysis] Raw response data (first 200 chars):', JSON.stringify(data).substring(0, 200));
     if (isLmStudio && data && typeof data === 'object' && 'choices' in data && Array.isArray(data.choices)) {
       const content = data.choices[0]?.message?.content;
+      console.log('[Analysis] LM Studio content (first 800 chars):', typeof content === 'string' ? content.substring(0, 800) : content);
       if (typeof content === 'string') {
-        data = JSON.parse(extractJsonBlock(content));
+        try {
+          const jsonBlock = extractJsonBlock(content);
+          console.log('[Analysis] Extracted JSON block (first 800 chars):', jsonBlock.substring(0, 800));
+          data = JSON.parse(jsonBlock);
+          console.log('[Analysis] Parsed JSON data keys:', Object.keys(data));
+        } catch (parseError) {
+          console.error('[Analysis] Failed to parse LM Studio content as JSON:', parseError);
+          console.error('[Analysis] Raw content:', content);
+          throw new Error(`LM Studio returned invalid JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+        }
       }
     }
     const parsed = createCheckpointSchema(locale).parse(normalizeCheckpointLlmOutput(data));
@@ -217,11 +239,18 @@ export async function analyzeWindow(params: {
     const appSummary = [...new Set(snapshots.map((item) => trimText(item.activeApp)).filter(Boolean))];
     const urlSummary = [...new Set(snapshots.map((item) => trimText(item.url)).filter(Boolean))];
 
-    return {
+    let projectName = toStoredProjectName(trimText(parsed.project_name));
+    // フォールバック: 継続と判断されているがプロジェクト名が不明な場合、前回のチェックポイントを参照
+    if (isUnknownLabel(projectName) && previousCheckpoint && parsed.continuity === 'continue') {
+      console.log('[Analysis] Fallback to previous checkpoint project name:', previousCheckpoint.projectName);
+      projectName = previousCheckpoint.projectName;
+    }
+
+    const result: CheckpointRecord = {
       id: createId('cp'),
       startAt,
       endAt,
-      projectName: toStoredProjectName(trimText(parsed.project_name)),
+      projectName,
       taskLabel: trimText(parsed.task_label) || localizeUnknownTaskLabel(locale),
       category: UNKNOWN_LABEL,
       stateSummary: trimText(parsed.state_summary) || localizeInsufficientInfoSummary(locale),
@@ -236,9 +265,39 @@ export async function analyzeWindow(params: {
       appSummary,
       urlSummary,
     };
+
+    db?.insertAnalysisLog({
+      provider: settings.llmProvider,
+      model: settings.llmModel,
+      locale,
+      promptText: prompt,
+      responseText: JSON.stringify(data),
+      parsedJson: JSON.stringify(parsed),
+      snapshotIds: snapshots.map((s) => s.id),
+      previousCheckpointId: previousCheckpoint?.id ?? null,
+      projectNameResult: result.projectName,
+      durationMs: Date.now() - startTime,
+    });
+
+    return result;
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     console.error('[Analysis] Error:', errMsg);
+
+    db?.insertAnalysisLog({
+      provider: settings.llmProvider,
+      model: settings.llmModel,
+      locale,
+      promptText: prompt,
+      responseText: null,
+      parsedJson: null,
+      error: errMsg,
+      snapshotIds: snapshots.map((s) => s.id),
+      previousCheckpointId: previousCheckpoint?.id ?? null,
+      projectNameResult: null,
+      durationMs: Date.now() - startTime,
+    });
+
     throw error;
   } finally {
     clearTimeout(timeout);

@@ -384,11 +384,14 @@ export class TrackerService {
             checkpoint = this.createIdleCheckpoint(windowSnapshots);
           } else {
             const previous = this.db.getLastCheckpoint();
+            const knownProjects = this.db.listKnownProjectNames();
             checkpoint = await analyzeWindow({
               snapshots: windowSnapshots,
               settings: this.settings,
               locale: this.locale,
               previousCheckpoint: previous,
+              knownProjects,
+              db: this.db,
             });
           }
           this.db.insertCheckpoint(checkpoint);

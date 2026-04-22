@@ -130,6 +130,7 @@ it('handles error response with non-ok status', async () => {
         Promise.resolve({
           ok: false,
           status: 500,
+          text: () => Promise.resolve('Internal Server Error'),
         }),
       ) as unknown as typeof fetch;
 
@@ -213,6 +214,180 @@ it('handles error response with non-ok status', async () => {
       });
 
       expect(mockReadFile).toHaveBeenCalledTimes(2);
+    });
+
+    it('falls back to previous checkpoint project name when current is unknown and continuity is continue', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const previousCheckpoint: CheckpointRecord = {
+        id: 'cp1',
+        startAt: '2026-04-18T09:50:00Z',
+        endAt: '2026-04-18T10:00:00Z',
+        projectName: 'myloggy',
+        taskLabel: 'コーディング',
+        category: '開発',
+        stateSummary: '作業中',
+        evidence: ['VS Codeを開いた'],
+        continuity: 'continue',
+        confidence: 0.9,
+        sourceSnapshotIds: ['s0'],
+        llmModel: 'llama3',
+        createdAt: '2026-04-18T10:00:00Z',
+        isDistracted: false,
+        status: 'completed',
+        appSummary: ['VS Code'],
+        urlSummary: [],
+      };
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'Unknown',
+                      task_label: '調査',
+                      state_summary: '調査中',
+                      evidence: ['ログを確認した'],
+                      continuity: 'continue',
+                      confidence: 0.8,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint,
+      });
+
+      expect(result.projectName).toBe('myloggy');
+      expect(result.continuity).toBe('continue');
+    });
+
+    it('does not fall back when continuity is switch', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const previousCheckpoint: CheckpointRecord = {
+        id: 'cp1',
+        startAt: '2026-04-18T09:50:00Z',
+        endAt: '2026-04-18T10:00:00Z',
+        projectName: 'myloggy',
+        taskLabel: 'コーディング',
+        category: '開発',
+        stateSummary: '作業中',
+        evidence: ['VS Codeを開いた'],
+        continuity: 'continue',
+        confidence: 0.9,
+        sourceSnapshotIds: ['s0'],
+        llmModel: 'llama3',
+        createdAt: '2026-04-18T10:00:00Z',
+        isDistracted: false,
+        status: 'completed',
+        appSummary: ['VS Code'],
+        urlSummary: [],
+      };
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'Unknown',
+                      task_label: '調査',
+                      state_summary: '調査中',
+                      evidence: ['ログを確認した'],
+                      continuity: 'switch',
+                      confidence: 0.8,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint,
+      });
+
+      expect(result.projectName).toBe('不明');
+      expect(result.continuity).toBe('switch');
+    });
+
+    it('includes knownProjects in the prompt for LM Studio', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const fetchMock = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [{ message: { content: '{}' } }],
+            }),
+        }),
+      );
+      global.fetch = fetchMock as ReturnType<typeof vi.fn>;
+
+      await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+        knownProjects: ['myloggy', 'aidrivensales'],
+      });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const promptText = requestBody.messages[0].content[0].text;
+      expect(promptText).toContain('Known projects:');
+      expect(promptText).toContain('- myloggy');
+      expect(promptText).toContain('- aidrivensales');
+    });
+
+    it('includes knownProjects in Japanese prompt', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const fetchMock = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [{ message: { content: '{}' } }],
+            }),
+        }),
+      );
+      global.fetch = fetchMock as ReturnType<typeof vi.fn>;
+
+      await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'ja',
+        previousCheckpoint: null,
+        knownProjects: ['myloggy', '社内管理システム'],
+      });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const promptText = requestBody.messages[0].content[0].text;
+      expect(promptText).toContain('既知のプロジェクト:');
+      expect(promptText).toContain('- myloggy');
+      expect(promptText).toContain('- 社内管理システム');
     });
   });
 });

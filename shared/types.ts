@@ -213,6 +213,22 @@ export interface ErrorLogRecord {
   detail: string | null;
 }
 
+export interface AnalysisLogRecord {
+  id: string;
+  createdAt: string;
+  provider: string;
+  model: string;
+  locale: string;
+  promptText: string;
+  responseText: string | null;
+  parsedJson: string | null;
+  error: string | null;
+  snapshotIds: string[];
+  previousCheckpointId: string | null;
+  projectNameResult: string | null;
+  durationMs: number | null;
+}
+
 export interface BootstrapPayload {
   locale: SupportedLocale;
   state: AppState;
