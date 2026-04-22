@@ -39,7 +39,7 @@ button { cursor: pointer; }
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, auto) 1fr;
   min-height: 100vh;
 }
 
@@ -100,6 +100,8 @@ button { cursor: pointer; }
 }
 
 .analysis-error-banner {
+  max-height: 50px;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -900,7 +902,7 @@ textarea { resize: vertical; }
   .top-bar { padding: 8px 12px; min-height: 48px; }
   .analysis-error-banner { padding: 10px 12px; align-items: stretch; }
   .analysis-error-copy { flex-wrap: wrap; align-items: flex-start; }
-  .analysis-error-copy span { word-break: break-word; }
+  .analysis-error-copy span { white-space: normal; word-break: break-word; }
   .analysis-error-actions { width: 100%; justify-content: flex-end; }
   .work-unit { grid-template-columns: 1fr; }
   .work-heading { flex-direction: column; }
