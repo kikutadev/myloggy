@@ -7,6 +7,7 @@ import {
   isUnknownLabel,
   localizeInsufficientInfoSummary,
   localizeUnknownTaskLabel,
+  toStoredCategoryLabel,
   toStoredProjectName,
   type SupportedLocale,
 } from '../../shared/localization.js';
@@ -19,6 +20,7 @@ function createCheckpointSchema(locale: SupportedLocale) {
   return z.object({
     project_name: z.string().default(locale === 'ja' ? UNKNOWN_LABEL : 'Unknown'),
     task_label: z.string().default(localizeUnknownTaskLabel(locale)),
+    category: z.string().default(UNKNOWN_LABEL),
     state_summary: z.string().default(localizeInsufficientInfoSummary(locale)),
     evidence: z.array(z.string()).default([locale === 'ja' ? 'メタ情報不足' : 'Insufficient metadata']),
     continuity: z.enum(['continue', 'switch', 'unclear']).default('unclear'),
@@ -33,6 +35,7 @@ function buildPrompt(
   previousCheckpoint: CheckpointRecord | null,
   locale: SupportedLocale,
   knownProjects: string[],
+  categories: string[],
 ): string {
   const snapshotLines = snapshots.map((snapshot, index) => {
     return [
@@ -74,6 +77,12 @@ continuity=${previousCheckpoint.continuity}
       : `\nKnown projects:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\nIf the activity matches one of the above, use that exact project_name. Only use "Unknown" if it does not match any known project.\n`
     : '';
 
+  const categoriesBlock = categories.length
+    ? locale === 'ja'
+      ? `\nカテゴリ候補:\n${categories.map((c) => `- ${c}`).join('\n')}\n上記から最も該当する category を選ぶこと。該当しない場合のみ「不明」にすること。\n`
+      : `\nCategory candidates:\n${categories.map((c) => `- ${c}`).join('\n')}\nChoose the most appropriate category from the list above. Only use "Unknown" if none apply.\n`
+    : '';
+
   if (locale === 'ja') {
     return `
 あなたはローカル作業ログアプリの分類器です。
@@ -82,12 +91,13 @@ continuity=${previousCheckpoint.continuity}
 
 ${previousBlock}
 ${knownProjectsBlock}
+${categoriesBlock}
 観測データ:
 ${snapshotLines.join('\n\n')}
 
 出力要件:
 - 絶対にJSONのみを返すこと。前後に説明文やマークダウンの装飾（\`\`\`json など）を付けないこと
-- キーは project_name, task_label, state_summary, evidence, continuity, confidence, is_distracted
+- キーは project_name, task_label, category, state_summary, evidence, continuity, confidence, is_distracted
 - evidence は 2〜10件
 - task_label は短く具体的な自然な日本語
 - state_summary と evidence も自然な日本語
@@ -108,12 +118,13 @@ Do not over-infer. Prioritize directly visible facts.
 
 ${previousBlock}
 ${knownProjectsBlock}
+${categoriesBlock}
 Observations:
 ${snapshotLines.join('\n\n')}
 
 Output requirements:
 - You must return ONLY raw JSON. Do not include any explanatory text, markdown formatting, or code fences (such as \`\`\`json)
-- Use the keys project_name, task_label, state_summary, evidence, continuity, confidence, is_distracted
+- Use the keys project_name, task_label, category, state_summary, evidence, continuity, confidence, is_distracted
 - evidence must contain 2 to 10 items
 - task_label must be short, specific, and natural English
 - state_summary and evidence must also be concise natural English
@@ -137,7 +148,7 @@ export async function analyzeWindow(params: {
 }): Promise<CheckpointRecord> {
   const { snapshots, settings, locale, previousCheckpoint, knownProjects = [], db } = params;
   const startTime = Date.now();
-  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects);
+  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects, settings.categories);
   const images = await Promise.all(
     snapshots
       .flatMap((snapshot) => (snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : []))
@@ -246,13 +257,18 @@ export async function analyzeWindow(params: {
       projectName = previousCheckpoint.projectName;
     }
 
+    let category = toStoredCategoryLabel(trimText(parsed.category));
+    if (!category || isUnknownLabel(category)) {
+      category = UNKNOWN_LABEL;
+    }
+
     const result: CheckpointRecord = {
       id: createId('cp'),
       startAt,
       endAt,
       projectName,
       taskLabel: trimText(parsed.task_label) || localizeUnknownTaskLabel(locale),
-      category: UNKNOWN_LABEL,
+      category,
       stateSummary: trimText(parsed.state_summary) || localizeInsufficientInfoSummary(locale),
       evidence: parsed.evidence.filter(Boolean).slice(0, 10),
       continuity: parsed.continuity,

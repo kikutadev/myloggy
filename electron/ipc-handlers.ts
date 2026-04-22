@@ -35,6 +35,7 @@ export function registerIpcHandlers(
     }
   });
   ipcMain.handle('debug:data', () => tracker.getDebugData());
+  ipcMain.handle('checkpoint:snapshots', (_event, checkpointId: string) => tracker.getCheckpointSnapshots(checkpointId));
   ipcMain.handle('ollama:check', async () => {
     const settings = tracker.getSettings();
     try {

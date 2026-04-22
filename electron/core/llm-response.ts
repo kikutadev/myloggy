@@ -8,6 +8,7 @@ const ENVELOPE_KEYS = ['response', 'output', 'result', 'data', 'json', 'content'
 const FIELD_ALIASES = {
   project_name: ['project_name', 'projectName'] as const,
   task_label: ['task_label', 'taskLabel'] as const,
+  category: ['category'] as const,
   state_summary: ['state_summary', 'stateSummary'] as const,
   evidence: ['evidence'] as const,
   continuity: ['continuity'] as const,
@@ -260,6 +261,7 @@ export function normalizeCheckpointLlmOutput(raw: unknown): Record<string, unkno
   return {
     project_name: normalizeTextValue(firstAliasValue(candidate, FIELD_ALIASES.project_name)),
     task_label: normalizeTextValue(firstAliasValue(candidate, FIELD_ALIASES.task_label)),
+    category: normalizeTextValue(firstAliasValue(candidate, FIELD_ALIASES.category)),
     state_summary: normalizeTextValue(firstAliasValue(candidate, FIELD_ALIASES.state_summary)),
     evidence: normalizeEvidenceValue(firstAliasValue(candidate, FIELD_ALIASES.evidence)),
     continuity: normalizeContinuityValue(firstAliasValue(candidate, FIELD_ALIASES.continuity)),

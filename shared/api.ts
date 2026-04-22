@@ -2,6 +2,7 @@ import type {
   AppSettings,
   AppState,
   BootstrapPayload,
+  CheckpointSnapshot,
   DashboardData,
   DayTimeline,
   DebugData,
@@ -35,4 +36,5 @@ export interface DesktopApi {
   checkLmstudio(): Promise<LmStudioStatus>;
   testLmstudioModel(params: { model: string; lmstudioHost: string }): Promise<ModelCheckResult>;
   getDebugData(): Promise<DebugData>;
+  getCheckpointSnapshots(checkpointId: string): Promise<CheckpointSnapshot[]>;
 }

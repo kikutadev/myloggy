@@ -200,6 +200,13 @@ export interface DebugSnapshot {
   displayCount: number;
 }
 
+export interface CheckpointSnapshot {
+  id: string;
+  capturedAt: string;
+  imagesBase64: string[];
+  displayCount: number;
+}
+
 export interface DebugData {
   snapshots: DebugSnapshot[];
   errors: ErrorLogRecord[];

@@ -602,6 +602,12 @@ patchWorkUnit(patch: WorkUnitPatch): WorkUnitRecord | null {
     ).map(rowToSnapshot);
   }
 
+  listSnapshotsByCheckpointId(checkpointId: string): SnapshotRecord[] {
+    return (
+      this.db.prepare('SELECT * FROM snapshots WHERE checkpoint_id = ? ORDER BY captured_at ASC').all(checkpointId) as Record<string, unknown>[]
+    ).map(rowToSnapshot);
+  }
+
   listPendingSnapshots(): SnapshotRecord[] {
     return (
       this.db

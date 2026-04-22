@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type { DesktopApi } from '../shared/api.js';
-import type { AppSettings, BootstrapPayload, DebugData, LmStudioStatus, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
+import type { AppSettings, BootstrapPayload, CheckpointSnapshot, DebugData, LmStudioStatus, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
 
 const api: DesktopApi = {
   bootstrap: (date: string) => ipcRenderer.invoke('bootstrap', date) as Promise<BootstrapPayload>,
@@ -32,6 +32,7 @@ const api: DesktopApi = {
   checkLmstudio: () => ipcRenderer.invoke('lmstudio:check') as Promise<LmStudioStatus>,
   testLmstudioModel: (params) => ipcRenderer.invoke('lmstudio:test-model', params),
   getDebugData: () => ipcRenderer.invoke('debug:data') as Promise<DebugData>,
+  getCheckpointSnapshots: (checkpointId: string) => ipcRenderer.invoke('checkpoint:snapshots', checkpointId) as Promise<CheckpointSnapshot[]>,
 };
 
 contextBridge.exposeInMainWorld('myloggy', api);

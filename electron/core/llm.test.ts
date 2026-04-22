@@ -69,6 +69,7 @@ describe('buildPrompt', () => {
     idleThresholdMs: 300000,
     gitRemote: null,
     gitToken: null,
+    categories: ['開発', '調査・情報収集', '事務作業', '打ち合わせ', '休憩', 'サボり'],
   } as AppSettings;
 
   describe('analyzeWindow', () => {
@@ -388,6 +389,137 @@ it('handles error response with non-ok status', async () => {
       expect(promptText).toContain('既知のプロジェクト:');
       expect(promptText).toContain('- myloggy');
       expect(promptText).toContain('- 社内管理システム');
+    });
+
+    it('includes categories in the prompt', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const fetchMock = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [{ message: { content: '{}' } }],
+            }),
+        }),
+      );
+      global.fetch = fetchMock as ReturnType<typeof vi.fn>;
+
+      await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+      });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const promptText = requestBody.messages[0].content[0].text;
+      expect(promptText).toContain('Category candidates:');
+      expect(promptText).toContain('- 開発');
+      expect(promptText).toContain('- 調査・情報収集');
+    });
+
+    it('includes categories in Japanese prompt', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      const fetchMock = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [{ message: { content: '{}' } }],
+            }),
+        }),
+      );
+      global.fetch = fetchMock as ReturnType<typeof vi.fn>;
+
+      await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'ja',
+        previousCheckpoint: null,
+      });
+
+      const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const promptText = requestBody.messages[0].content[0].text;
+      expect(promptText).toContain('カテゴリ候補:');
+      expect(promptText).toContain('- 開発');
+      expect(promptText).toContain('- 調査・情報収集');
+    });
+
+    it('normalizes LLM-returned category using toStoredCategoryLabel', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'myloggy',
+                      task_label: 'coding',
+                      category: 'Development',
+                      state_summary: 'working on feature',
+                      evidence: ['coding'],
+                      continuity: 'continue',
+                      confidence: 0.9,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+      });
+
+      expect(result.category).toBe('開発');
+    });
+
+    it('falls back to UNKNOWN_LABEL when LLM does not return a category', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'myloggy',
+                      task_label: 'coding',
+                      state_summary: 'working on feature',
+                      evidence: ['coding'],
+                      continuity: 'continue',
+                      confidence: 0.9,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+      });
+
+      expect(result.category).toBe('不明');
     });
   });
 });

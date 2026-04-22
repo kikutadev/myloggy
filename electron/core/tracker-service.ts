@@ -18,6 +18,7 @@ import type {
   AppSettings,
   AppState,
   BootstrapPayload,
+  CheckpointSnapshot,
   DashboardData,
   DebugData,
   DebugSnapshot,
@@ -222,6 +223,25 @@ export class TrackerService {
       snapshots,
       errors: this.db.listErrors(10),
     };
+  }
+
+  getCheckpointSnapshots(checkpointId: string): CheckpointSnapshot[] {
+    const snapshots = this.db.listSnapshotsByCheckpointId(checkpointId);
+    return snapshots.map((s) => {
+      const paths = s.imagePaths.length ? s.imagePaths : s.imagePath ? [s.imagePath] : [];
+      const imagesBase64: string[] = [];
+      for (const p of paths) {
+        if (fs.existsSync(p)) {
+          try { imagesBase64.push(fs.readFileSync(p).toString('base64')); } catch { /* ignore */ }
+        }
+      }
+      return {
+        id: s.id,
+        capturedAt: s.capturedAt,
+        imagesBase64,
+        displayCount: s.displayCount,
+      };
+    });
   }
 
   private ensureCategoryInSettings(category: string): void {
