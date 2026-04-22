@@ -13,12 +13,36 @@ try {
 
 function getDbPath() {
   const args = process.argv.slice(2);
-  const dataDirFlag = args.find((a) => a.startsWith('--data-dir='));
-  if (dataDirFlag) {
-    return path.join(dataDirFlag.split('=')[1], 'myloggy.sqlite');
+
+  // --db=<path> : direct sqlite file path
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--db=')) {
+      return args[i].split('=').slice(1).join('=');
+    }
+    if (args[i] === '--db' && i + 1 < args.length) {
+      return args[i + 1];
+    }
   }
+
+  // --data-dir=<dir> : directory containing myloggy.sqlite
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith('--data-dir=')) {
+      const dir = args[i].split('=').slice(1).join('=');
+      return path.join(dir, 'myloggy.sqlite');
+    }
+    if (args[i] === '--data-dir' && i + 1 < args.length) {
+      return path.join(args[i + 1], 'myloggy.sqlite');
+    }
+  }
+
   const home = os.homedir();
+  // macOS paths
   const candidates = [
+    // Development (Electron)
+    path.join(home, 'Library', 'Application Support', 'Electron', 'myloggy-data', 'myloggy.sqlite'),
+    // Production
+    path.join(home, 'Library', 'Application Support', 'myloggy', 'myloggy-data', 'myloggy.sqlite'),
+    // Legacy / fallback
     path.join(home, 'Library', 'Application Support', 'myloggy', 'myloggy.sqlite'),
     path.join(home, '.config', 'myloggy', 'myloggy.sqlite'),
     path.join(home, '.local', 'share', 'myloggy', 'myloggy.sqlite'),
@@ -34,7 +58,8 @@ function printHelp() {
 Usage: node scripts/query-analysis-logs.mjs [options] [command]
 
 Options:
-  --data-dir=<path>  Path to myloggy data directory
+  --db=<path>        Direct path to myloggy.sqlite file
+  --data-dir=<dir>   Directory containing myloggy.sqlite
 
 Commands:
   list [N]           List latest N analysis logs (default: 20)
@@ -43,6 +68,11 @@ Commands:
   stats              Show statistics (provider, model, project_name counts)
   search <keyword>   Search in prompt_text or response_text
   dump               Dump all logs as JSON
+
+Examples:
+  node scripts/query-analysis-logs.mjs list 10
+  node scripts/query-analysis-logs.mjs --db /Users/kiku28/Library/Application\\ Support/Electron/myloggy-data/myloggy.sqlite show alog-xxxxx
+  node scripts/query-analysis-logs.mjs --data-dir /Users/kiku28/Library/Application\\ Support/Electron/myloggy-data list 5
 `);
 }
 
