@@ -60,7 +60,7 @@ describe('TrackerService', () => {
       const state = await tracker.reanalyzeDate('2024-01-15');
 
       // Assert
-      expect(analyzeSpy).toHaveBeenCalledWith(true);
+      expect(analyzeSpy).toHaveBeenCalledWith(true, expect.any(String), expect.any(String));
       expect(db.getSnapshotById('snap_1')?.status).toBe('captured');
       expect(db.getSnapshotById('snap_1')?.checkpointId).toBeNull();
       expect(db.listCheckpointsBetween('2024-01-15T00:00:00Z', '2024-01-15T23:59:59Z')).toHaveLength(0);

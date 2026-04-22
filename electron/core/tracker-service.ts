@@ -189,7 +189,7 @@ export class TrackerService {
     console.log('[Reanalyze]', date, result);
     this.emitProgress({ phase: 'reset', current: result.deletedCheckpoints, total: result.deletedCheckpoints, message: `既存解析結果を削除しました (${result.deletedCheckpoints}件)` });
 
-    await this.analyzeReadyWindows(true);
+    await this.analyzeReadyWindows(true, start, end);
     return this.getState();
   }
 
@@ -395,7 +395,7 @@ export class TrackerService {
     }
   }
 
-  private async analyzeReadyWindows(force = false): Promise<void> {
+  private async analyzeReadyWindows(force = false, startIso?: string, endIso?: string): Promise<void> {
     if (this.isAnalyzing) {
       return;
     }
@@ -409,6 +409,8 @@ export class TrackerService {
       const windows = this.db.getReadySnapshotWindows(
         this.settings.checkIntervalMinutes,
         force ? dayjs().add(this.settings.checkIntervalMinutes, 'minute').toISOString() : new Date().toISOString(),
+        startIso,
+        endIso,
       );
       const total = windows.length;
 

@@ -92,16 +92,24 @@ export class SnapshotRepository extends BaseRepository {
     ).map(rowToSnapshot);
   }
 
-  getReadyWindows(intervalMinutes: number, nowIso: string): SnapshotRecord[][] {
-    const rows = this._all(
-      `
+  getReadyWindows(intervalMinutes: number, nowIso: string, startIso?: string, endIso?: string): SnapshotRecord[][] {
+    let query = `
       SELECT *
       FROM snapshots
       WHERE checkpoint_id IS NULL
         AND status IN ('captured', 'analysis_failed')
-      ORDER BY captured_at ASC
-      `,
-    ) as Record<string, unknown>[];
+    `;
+    const params: (string | number)[] = [];
+    if (startIso) {
+      query += ` AND captured_at >= ?`;
+      params.push(startIso);
+    }
+    if (endIso) {
+      query += ` AND captured_at <= ?`;
+      params.push(endIso);
+    }
+    query += ` ORDER BY captured_at ASC`;
+    const rows = this._all(query, ...params) as Record<string, unknown>[];
 
     const readyBefore = new Date(nowIso).getTime();
     const windows = new Map<string, SnapshotRecord[]>();

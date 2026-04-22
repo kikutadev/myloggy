@@ -81,8 +81,8 @@ export class AppDatabase {
     this.snapshotsRepo.insert(snapshot);
   }
 
-  getReadySnapshotWindows(intervalMinutes: number, nowIso: string): SnapshotRecord[][] {
-    return this.snapshotsRepo.getReadyWindows(intervalMinutes, nowIso);
+  getReadySnapshotWindows(intervalMinutes: number, nowIso: string, startIso?: string, endIso?: string): SnapshotRecord[][] {
+    return this.snapshotsRepo.getReadyWindows(intervalMinutes, nowIso, startIso, endIso);
   }
 
   incrementAnalysisAttempts(snapshotIds: string[]): void {

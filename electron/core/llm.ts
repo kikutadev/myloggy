@@ -161,12 +161,17 @@ export async function analyzeWindow(params: {
   const { snapshots, settings, locale, previousCheckpoint, knownProjects = [], db, autoCreateProject = true, autoCreateCategory = true } = params;
   const startTime = Date.now();
   const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects, settings.categories, autoCreateProject, autoCreateCategory);
-  const images = await Promise.all(
-    snapshots
-      .flatMap((snapshot) => (snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : []))
-      .filter((value): value is string => Boolean(value))
-      .map(async (filePath) => (await fs.readFile(filePath)).toString('base64')),
-  );
+  const imagePaths = snapshots
+    .flatMap((snapshot) => (snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : []))
+    .filter((value): value is string => Boolean(value));
+  const images: string[] = [];
+  for (const filePath of imagePaths) {
+    try {
+      images.push((await fs.readFile(filePath)).toString('base64'));
+    } catch (err) {
+      console.warn(`[Analysis] Skipping missing image file: ${filePath}`, err);
+    }
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), settings.analysisTimeoutMs);
