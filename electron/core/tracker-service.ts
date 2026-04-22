@@ -412,9 +412,14 @@ export class TrackerService {
               previousCheckpoint: previous,
               knownProjects,
               db: this.db,
+              autoCreateProject: this.settings.autoCreateProject,
+              autoCreateCategory: this.settings.autoCreateCategory,
             });
           }
           this.db.insertCheckpoint(checkpoint);
+          if (this.settings.autoCreateCategory && !isUnknownLabel(checkpoint.category) && !this.settings.categories.includes(checkpoint.category)) {
+            this.ensureCategoryInSettings(checkpoint.category);
+          }
           this.attachCheckpointToWorkUnit(checkpoint);
           this.db.markSnapshotsProcessed(windowSnapshots.map((snapshot) => snapshot.id), checkpoint.id);
 

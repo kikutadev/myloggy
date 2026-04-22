@@ -119,6 +119,8 @@ type UiText = {
   lmstudioMissing: string;
   installLmstudioSub: string;
   currentProvider: (provider: string, model: string) => string;
+  autoCreateProject: string;
+  autoCreateCategory: string;
 };
 
 type I18nValue = {
@@ -246,6 +248,8 @@ function createText(locale: SupportedLocale): UiText {
       lmstudioMissing: 'LM Studio が見つかりません',
       installLmstudioSub: 'またはlmstudio.aiからダウンロードしてください。',
       currentProvider: (provider, model) => `現在の設定: ${provider} - ${model}`,
+      autoCreateProject: 'プロジェクトの自動作成',
+      autoCreateCategory: 'カテゴリの自動作成',
     };
   }
 
@@ -356,8 +360,10 @@ function createText(locale: SupportedLocale): UiText {
     lmstudioRunning: 'LM Studio is running',
     lmstudioMissing: 'LM Studio was not found',
     installLmstudioSub: 'Or download it from lmstudio.ai.',
-    currentProvider: (provider, model) => `Current: ${provider} - ${model}`,
-  };
+      currentProvider: (provider, model) => `Current: ${provider} - ${model}`,
+      autoCreateProject: 'Auto-create projects',
+      autoCreateCategory: 'Auto-create categories',
+    };
 }
 
 function createI18n(locale: SupportedLocale): I18nValue {

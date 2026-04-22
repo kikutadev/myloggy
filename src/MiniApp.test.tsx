@@ -59,6 +59,8 @@ const mockSettings: AppSettings = {
   maxAnalysisRetries: 3,
   idleGapMinutes: 5,
   categories: [],
+  autoCreateProject: true,
+  autoCreateCategory: true,
   onboardingCompleted: true,
 };
 

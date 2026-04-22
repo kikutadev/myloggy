@@ -414,7 +414,7 @@ it('handles error response with non-ok status', async () => {
 
       const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       const promptText = requestBody.messages[0].content[0].text;
-      expect(promptText).toContain('Category candidates:');
+      expect(promptText).toContain('Existing categories:');
       expect(promptText).toContain('- 開発');
       expect(promptText).toContain('- 調査・情報収集');
     });
@@ -442,7 +442,7 @@ it('handles error response with non-ok status', async () => {
 
       const requestBody = JSON.parse(fetchMock.mock.calls[0][1].body);
       const promptText = requestBody.messages[0].content[0].text;
-      expect(promptText).toContain('カテゴリ候補:');
+      expect(promptText).toContain('既存カテゴリ:');
       expect(promptText).toContain('- 開発');
       expect(promptText).toContain('- 調査・情報収集');
     });
@@ -517,6 +517,85 @@ it('handles error response with non-ok status', async () => {
         settings: { ...baseSettings, llmProvider: 'lmstudio' },
         locale: 'en',
         previousCheckpoint: null,
+      });
+
+      expect(result.category).toBe('不明');
+    });
+
+    it('rejects unknown project name when autoCreateProject is false', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'brand-new-project',
+                      task_label: 'coding',
+                      category: '開発',
+                      state_summary: 'working on feature',
+                      evidence: ['coding'],
+                      continuity: 'continue',
+                      confidence: 0.9,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+        knownProjects: ['myloggy'],
+        autoCreateProject: false,
+      });
+
+      expect(result.projectName).toBe('不明');
+    });
+
+    it('rejects unknown category when autoCreateCategory is false', async () => {
+      mockReadFile.mockResolvedValue(Buffer.from('test').toString('base64') as never);
+
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      project_name: 'myloggy',
+                      task_label: 'coding',
+                      category: 'Design',
+                      state_summary: 'working on feature',
+                      evidence: ['coding'],
+                      continuity: 'continue',
+                      confidence: 0.9,
+                      is_distracted: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+        }),
+      ) as ReturnType<typeof vi.fn>;
+
+      const result = await analyzeWindow({
+        snapshots: baseSnapshots,
+        settings: { ...baseSettings, llmProvider: 'lmstudio' },
+        locale: 'en',
+        previousCheckpoint: null,
+        autoCreateCategory: false,
       });
 
       expect(result.category).toBe('不明');

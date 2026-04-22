@@ -36,6 +36,8 @@ function buildPrompt(
   locale: SupportedLocale,
   knownProjects: string[],
   categories: string[],
+  autoCreateProject: boolean,
+  autoCreateCategory: boolean,
 ): string {
   const snapshotLines = snapshots.map((snapshot, index) => {
     return [
@@ -73,14 +75,22 @@ continuity=${previousCheckpoint.continuity}
 
   const knownProjectsBlock = knownProjects.length
     ? locale === 'ja'
-      ? `\n既知のプロジェクト:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\n上記に該当する場合はその project_name を使うこと。該当しない場合のみ「不明」にすること。\n`
-      : `\nKnown projects:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\nIf the activity matches one of the above, use that exact project_name. Only use "Unknown" if it does not match any known project.\n`
+      ? autoCreateProject
+        ? `\n既知のプロジェクト:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\n上記に該当する場合はその project_name を使うこと。該当しない場合は画面内容から推定し、適切なプロジェクト名を新規に命名してよい。\n`
+        : `\n既知のプロジェクト:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\n上記に該当する場合はその project_name を使うこと。該当しない場合のみ「不明」にすること。\n`
+      : autoCreateProject
+        ? `\nKnown projects:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\nIf the activity matches one of the above, use that exact project_name. Otherwise, infer an appropriate new project name from the screen content.\n`
+        : `\nKnown projects:\n${knownProjects.map((p) => `- ${p}`).join('\n')}\nIf the activity matches one of the above, use that exact project_name. Only use "Unknown" if it does not match any known project.\n`
     : '';
 
   const categoriesBlock = categories.length
     ? locale === 'ja'
-      ? `\nカテゴリ候補:\n${categories.map((c) => `- ${c}`).join('\n')}\n上記から最も該当する category を選ぶこと。該当しない場合のみ「不明」にすること。\n`
-      : `\nCategory candidates:\n${categories.map((c) => `- ${c}`).join('\n')}\nChoose the most appropriate category from the list above. Only use "Unknown" if none apply.\n`
+      ? autoCreateCategory
+        ? `\n既存カテゴリ:\n${categories.map((c) => `- ${c}`).join('\n')}\n上記に該当する場合はその category を使うこと。該当しない場合は作業の性質に応じて新しいカテゴリを命名してよい。\n`
+        : `\n既存カテゴリ:\n${categories.map((c) => `- ${c}`).join('\n')}\n上記から最も該当する category を選ぶこと。該当しない場合のみ「不明」にすること。\n`
+      : autoCreateCategory
+        ? `\nExisting categories:\n${categories.map((c) => `- ${c}`).join('\n')}\nIf the activity matches one of the above, use that exact category. Otherwise, create an appropriate new category name based on the work nature.\n`
+        : `\nCategory candidates:\n${categories.map((c) => `- ${c}`).join('\n')}\nChoose the most appropriate category from the list above. Only use "Unknown" if none apply.\n`
     : '';
 
   if (locale === 'ja') {
@@ -145,10 +155,12 @@ export async function analyzeWindow(params: {
   previousCheckpoint: CheckpointRecord | null;
   knownProjects?: string[];
   db?: AppDatabase;
+  autoCreateProject?: boolean;
+  autoCreateCategory?: boolean;
 }): Promise<CheckpointRecord> {
-  const { snapshots, settings, locale, previousCheckpoint, knownProjects = [], db } = params;
+  const { snapshots, settings, locale, previousCheckpoint, knownProjects = [], db, autoCreateProject = true, autoCreateCategory = true } = params;
   const startTime = Date.now();
-  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects, settings.categories);
+  const prompt = buildPrompt(snapshots, settings, previousCheckpoint, locale, knownProjects, settings.categories, autoCreateProject, autoCreateCategory);
   const images = await Promise.all(
     snapshots
       .flatMap((snapshot) => (snapshot.imagePaths.length ? snapshot.imagePaths : snapshot.imagePath ? [snapshot.imagePath] : []))
@@ -251,6 +263,10 @@ export async function analyzeWindow(params: {
     const urlSummary = [...new Set(snapshots.map((item) => trimText(item.url)).filter(Boolean))];
 
     let projectName = toStoredProjectName(trimText(parsed.project_name));
+    // 新規作成禁止時は既知プロジェクトに強制
+    if (!autoCreateProject && !isUnknownLabel(projectName) && !knownProjects.includes(projectName)) {
+      projectName = UNKNOWN_LABEL;
+    }
     // フォールバック: 継続と判断されているがプロジェクト名が不明な場合、前回のチェックポイントを参照
     if (isUnknownLabel(projectName) && previousCheckpoint && parsed.continuity === 'continue') {
       console.log('[Analysis] Fallback to previous checkpoint project name:', previousCheckpoint.projectName);
@@ -258,6 +274,10 @@ export async function analyzeWindow(params: {
     }
 
     let category = toStoredCategoryLabel(trimText(parsed.category));
+    // 新規作成禁止時は既存カテゴリに強制
+    if (!autoCreateCategory && !isUnknownLabel(category) && !settings.categories.includes(category)) {
+      category = UNKNOWN_LABEL;
+    }
     if (!category || isUnknownLabel(category)) {
       category = UNKNOWN_LABEL;
     }

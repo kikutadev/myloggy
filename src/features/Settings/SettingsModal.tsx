@@ -98,6 +98,22 @@ const {
               setModelCheck(null);
             }} />
           </label>
+          <label className="settings-checkbox">
+            <input
+              type="checkbox"
+              checked={draft.autoCreateProject}
+              onChange={(e) => setDraft({ ...draft, autoCreateProject: e.target.checked })}
+            />
+            {text.autoCreateProject}
+          </label>
+          <label className="settings-checkbox">
+            <input
+              type="checkbox"
+              checked={draft.autoCreateCategory}
+              onChange={(e) => setDraft({ ...draft, autoCreateCategory: e.target.checked })}
+            />
+            {text.autoCreateCategory}
+          </label>
           <label>{text.captureTarget}
             <select value={draft.displayCaptureMode} onChange={(e) => setDraft({ ...draft, displayCaptureMode: e.target.value as AppSettings['displayCaptureMode'] })}>
               <option value="all">{text.allDisplays}</option>

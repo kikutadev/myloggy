@@ -514,6 +514,15 @@ textarea { resize: vertical; }
 
 .settings-radio input { width: auto; }
 
+.settings-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.settings-checkbox input { width: auto; }
+
 .settings-current-provider {
   padding: 8px 16px;
   background: var(--surface);

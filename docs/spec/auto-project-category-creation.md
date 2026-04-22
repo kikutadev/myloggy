@@ -15,6 +15,20 @@ LLM が状況に応じて**新しいプロジェクト名やカテゴリを自�
 
 ## 詳細仕様
 
+### 0. オンオフ設定
+
+`AppSettings` に以下の2つのフラグを追加し、ユーザーが設定画面でオンオフできるようにする。
+
+```typescript
+export interface AppSettings {
+  // ... existing fields ...
+  autoCreateProject: boolean;  // デフォルト: true
+  autoCreateCategory: boolean; // デフォルト: true
+}
+```
+
+設定画面にはチェックボックスを追加し、リアルタイムで有効/無効を切り替えられるようにする。
+
 ### 1. プロンプトの変更
 
 `buildPrompt()` 内のプロジェクト名・カテゴリに関する指示を緩和する。
@@ -65,28 +79,38 @@ LLM が状況に応じて**新しいプロジェクト名やカテゴリを自�
 - 判断できない場合のみ「不明」にすること
 ```
 
-### 2. LLM 返答の正規化・バリデーション
+### 2. プロンプト＋コード双方での新規作成制御
 
-`analyzeWindow()` 内の処理を以下のように変更する:
+`buildPrompt()` では `autoCreateProject` / `autoCreateCategory` の値に応じてプロンプト内容を切り替える。
+
+- **ON（true）**: 「該当しない場合は新規に命名してよい」と指示
+- **OFF（false）**: 「該当しない場合のみ『不明』にすること」と指示（既存動作と同等）
+
+さらに **`analyzeWindow()` 内でもコード側で強制制御**を行い、LLM が無視して新規名称を返した場合でもブロックする。
 
 #### プロジェクト名
 ```typescript
 let projectName = toStoredProjectName(trimText(parsed.project_name));
-// 変更前: 不明なら前回のプロジェクト名にフォールバック
-// 変更後: 不明かつ継続の場合のみ前回のプロジェクト名にフォールバック
+// コード側での強制制御: 新規作成禁止時は既知プロジェクトに限定
+if (!autoCreateProject && !isUnknownLabel(projectName) && !knownProjects.includes(projectName)) {
+  projectName = UNKNOWN_LABEL;
+}
+// フォールバック: 継続と判断されているがプロジェクト名が不明な場合
 if (isUnknownLabel(projectName) && previousCheckpoint && parsed.continuity === 'continue') {
   projectName = previousCheckpoint.projectName;
 }
-// 新規プロジェクト名として受け入れる（toStoredProjectName で正規化済み）
 ```
 
 #### カテゴリ
 ```typescript
 let category = toStoredCategoryLabel(trimText(parsed.category));
+// コード側での強制制御: 新規作成禁止時は既存カテゴリに限定
+if (!autoCreateCategory && !isUnknownLabel(category) && !settings.categories.includes(category)) {
+  category = UNKNOWN_LABEL;
+}
 if (!category || isUnknownLabel(category)) {
   category = UNKNOWN_LABEL;
 }
-// 既存カテゴリリストにない新規カテゴリもそのまま受け入れる
 ```
 
 ### 3. 新規作成の検出と保存
@@ -143,14 +167,14 @@ if (!isUnknownLabel(checkpoint.projectName) && !isUnknownLabel(checkpoint.catego
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `electron/core/llm.ts` | `buildPrompt` の指示文変更、新規作成許可の追加 |
-| `electron/core/tracker-service.ts` | 新規プロジェクト/カテゴリの検出、設定保存、カテゴリルールの自動学習 |
-| `electron/core/db/repositories/settings.ts` | `categories` 更新メソッドの追加（必要に応じて） |
-| `electron/core/db/repositories/category-rules.ts` | 既存 `upsert` メソッドを利用 |
-| `src/features/Settings/CategoryEditor.tsx` | 自動作成カテゴリの表示・管理UI |
-| `src/features/Settings/useSettings.ts` | カテゴリ自動追加のハンドリング |
-| `src/features/DayView/DayView.tsx` など | 新規バッジ表示（オプション） |
-| `electron/core/llm.test.ts` | 新規プロジェクト名・カテゴリ作成のテスト追加 |
+| `shared/types.ts` | `AppSettings` に `autoCreateProject` / `autoCreateCategory` を追加 |
+| `electron/core/defaults.ts` | 新規フラグのデフォルト値（`true`）を追加 |
+| `electron/core/llm.ts` | `buildPrompt` にフラグ引数追加、プロンプト切り替え、`analyzeWindow` でコード側強制制御 |
+| `electron/core/tracker-service.ts` | `analyzeWindow` 呼び出し時にフラグを渡し、新規カテゴリ保存をゲート |
+| `src/i18n.tsx` | 設定UI用のテキスト追加 |
+| `src/features/Settings/SettingsModal.tsx` | オンオフ切り替えチェックボックス追加 |
+| `src/styles.css` | `.settings-checkbox` スタイル追加 |
+| `electron/core/llm.test.ts` | 新規作成許可/禁止のテスト追加、プロンプト文字列の更新 |
 
 ## テスト観点
 

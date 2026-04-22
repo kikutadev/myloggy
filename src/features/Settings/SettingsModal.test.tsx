@@ -23,6 +23,8 @@ const mockSettings: AppSettings = {
   maxAnalysisRetries: 3,
   idleGapMinutes: 5,
   categories: ['coding', 'meeting', 'planning'],
+  autoCreateProject: true,
+  autoCreateCategory: true,
   onboardingCompleted: true,
 };
 

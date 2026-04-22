@@ -18,5 +18,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxAnalysisRetries: 3,
   idleGapMinutes: 20,
   categories: DEFAULT_CATEGORIES,
+  autoCreateProject: true,
+  autoCreateCategory: true,
   onboardingCompleted: false,
 };

@@ -158,6 +158,8 @@ const select = screen.getByRole('combobox') as HTMLSelectElement;
         maxAnalysisRetries: 3,
         idleGapMinutes: 5,
         categories: ['coding'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
         onboardingCompleted: true,
       });
       vi.mocked(window.myloggy.updateSettings).mockResolvedValue({
@@ -177,6 +179,8 @@ const select = screen.getByRole('combobox') as HTMLSelectElement;
         maxAnalysisRetries: 3,
         idleGapMinutes: 5,
         categories: ['coding', 'design'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
         onboardingCompleted: true,
       });
 
@@ -213,6 +217,67 @@ await waitFor(() => {
         maxAnalysisRetries: 3,
         idleGapMinutes: 5,
         categories: ['coding'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
+        onboardingCompleted: true,
+      });
+      vi.mocked(window.myloggy.updateSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding', 'design'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
+        onboardingCompleted: true,
+      });
+
+      const select = screen.getByRole('combobox');
+      fireEvent.change(select, { target: { value: '__custom__' } });
+
+      const customInput = screen.getByPlaceholderText(/New category name/i);
+      fireEvent.change(customInput, { target: { value: 'design' } });
+      fireEvent.keyDown(customInput, { key: 'Enter' });
+
+await waitFor(() => {
+      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('design');
+    });
+    });
+
+    it('カスタムカテゴリ入力欄でblurするとカテゴリが確定する', async () => {
+      const unit = createMockWorkUnit({ category: 'coding' });
+      setup(unit);
+
+      vi.mocked(window.myloggy.getSettings).mockResolvedValue({
+        isTracking: false,
+        captureIntervalMinutes: 30,
+        checkIntervalMinutes: 15,
+        llmModel: 'gemma4:26b',
+        ollamaHost: 'http://localhost:11434',
+        llmProvider: 'ollama',
+        lmstudioHost: 'http://localhost:1234',
+        displayCaptureMode: 'main',
+        excludedApps: [],
+        excludedDomains: [],
+        excludedTimeBlocks: [],
+        excludedCaptureMode: 'skip',
+        analysisTimeoutMs: 60000,
+        maxAnalysisRetries: 3,
+        idleGapMinutes: 5,
+        categories: ['coding'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
         onboardingCompleted: true,
       });
       vi.mocked(window.myloggy.updateSettings).mockResolvedValue({
@@ -232,6 +297,8 @@ await waitFor(() => {
         maxAnalysisRetries: 3,
         idleGapMinutes: 5,
         categories: ['coding', 'review'],
+        autoCreateProject: true,
+        autoCreateCategory: true,
         onboardingCompleted: true,
       });
 

@@ -166,6 +166,8 @@ export interface AppSettings {
   maxAnalysisRetries: number;
   idleGapMinutes: number;
   categories: string[];
+  autoCreateProject: boolean;
+  autoCreateCategory: boolean;
   onboardingCompleted: boolean;
 }
 
