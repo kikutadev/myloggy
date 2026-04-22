@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 import type { DesktopApi } from '../shared/api.js';
-import type { AppSettings, BootstrapPayload, CheckpointSnapshot, DebugData, LmStudioStatus, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
+import type { AnalysisProgress, AppSettings, BootstrapPayload, CheckpointSnapshot, DebugData, LmStudioStatus, OllamaStatus, WorkUnitPatch } from '../shared/types.js';
 
 const api: DesktopApi = {
   bootstrap: (date: string) => ipcRenderer.invoke('bootstrap', date) as Promise<BootstrapPayload>,
@@ -16,6 +16,15 @@ const api: DesktopApi = {
     ipcRenderer.on('settings:changed', wrapped);
     return () => {
       ipcRenderer.off('settings:changed', wrapped);
+    };
+  },
+  onAnalysisProgress: (listener) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, progress: AnalysisProgress) => {
+      listener(progress);
+    };
+    ipcRenderer.on('analysis:progress', wrapped);
+    return () => {
+      ipcRenderer.off('analysis:progress', wrapped);
     };
   },
   getSettings: () => ipcRenderer.invoke('settings:get') as Promise<AppSettings>,

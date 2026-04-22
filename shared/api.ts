@@ -1,4 +1,5 @@
 import type {
+  AnalysisProgress,
   AppSettings,
   AppState,
   BootstrapPayload,
@@ -22,6 +23,7 @@ export interface DesktopApi {
   getWeekTimeline(date: string): Promise<WeekTimeline>;
   getMonthTimeline(date: string): Promise<MonthTimeline>;
   onSettingsChanged(listener: (settings: AppSettings) => void): () => void;
+  onAnalysisProgress(listener: (progress: AnalysisProgress) => void): () => void;
   getSettings(): Promise<AppSettings>;
   updateSettings(settings: Partial<AppSettings>): Promise<AppSettings>;
   toggleTracking(enabled: boolean): Promise<AppState>;

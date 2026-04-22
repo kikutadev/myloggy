@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { app, BrowserWindow, ipcMain, nativeImage, Tray } from 'electron';
 
 import { normalizeLocale } from '../shared/localization.js';
-import type { AppSettings } from '../shared/types.js';
+import type { AnalysisProgress, AppSettings } from '../shared/types.js';
 import { TrackerService } from './core/tracker-service.js';
 import { createMainWindow, createMiniWindow, createTray, broadcastSettingsChanged, getMainWindow } from './window-manager.js';
 import { registerIpcHandlers } from './ipc-handlers.js';
@@ -35,11 +35,18 @@ app.whenReady().then(() => {
   });
 
   // IPCハンドラを登録（trackerが必要なのでここで呼び出し）
+  const broadcastAnalysisProgress = (progress: AnalysisProgress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('analysis:progress', progress);
+    }
+  };
+
   registerIpcHandlers(
     tracker,
     () => mainWindow,
     (settings: AppSettings) => broadcastSettingsChanged(settings),
-    () => { mainWindow = createMainWindow(devServerUrl); return mainWindow; }
+    () => { mainWindow = createMainWindow(devServerUrl); return mainWindow; },
+    broadcastAnalysisProgress,
   );
 });
 

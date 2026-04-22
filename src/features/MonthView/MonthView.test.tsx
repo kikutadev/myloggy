@@ -72,6 +72,7 @@ const createMockDesktopApi = (): DesktopApi => ({
   testLmstudioModel: vi.fn(),
   toggleTracking: vi.fn(),
   onSettingsChanged: vi.fn(),
+  onAnalysisProgress: vi.fn(),
   getDashboard: vi.fn(),
   getDayTimeline: vi.fn(),
   getWeekTimeline: vi.fn(),

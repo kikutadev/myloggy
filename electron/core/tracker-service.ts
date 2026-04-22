@@ -15,6 +15,7 @@ import {
   type SupportedLocale,
 } from '../../shared/localization.js';
 import type {
+  AnalysisProgress,
   AppSettings,
   AppState,
   BootstrapPayload,
@@ -55,6 +56,7 @@ export class TrackerService {
   private lastCaptureAt: string | null = null;
   private lastCheckpointAt: string | null = null;
   private lastError: string | null = null;
+  private onProgress: ((progress: AnalysisProgress) => void) | null = null;
 
   constructor(
     private readonly baseDir: string,
@@ -116,6 +118,14 @@ export class TrackerService {
     return this.settings;
   }
 
+  setProgressListener(listener: ((progress: AnalysisProgress) => void) | null): void {
+    this.onProgress = listener;
+  }
+
+  private emitProgress(progress: AnalysisProgress): void {
+    this.onProgress?.(progress);
+  }
+
   getBootstrap(date: string): BootstrapPayload {
     const state = this.getState();
     return {
@@ -174,8 +184,10 @@ export class TrackerService {
     const start = dayjs(date).startOf('day').toISOString();
     const end = dayjs(date).endOf('day').toISOString();
 
+    this.emitProgress({ phase: 'reset', current: 0, total: 0, message: '既存解析結果を削除中...' });
     const result = this.db.resetAnalysisForDate(start, end);
     console.log('[Reanalyze]', date, result);
+    this.emitProgress({ phase: 'reset', current: result.deletedCheckpoints, total: result.deletedCheckpoints, message: `既存解析結果を削除しました (${result.deletedCheckpoints}件)` });
 
     await this.analyzeReadyWindows(true);
     return this.getState();
@@ -398,8 +410,12 @@ export class TrackerService {
         this.settings.checkIntervalMinutes,
         force ? dayjs().add(this.settings.checkIntervalMinutes, 'minute').toISOString() : new Date().toISOString(),
       );
+      const total = windows.length;
 
-      for (const windowSnapshots of windows) {
+      this.emitProgress({ phase: 'analyze', current: 0, total, message: `AI解析中... (0/${total})` });
+
+      for (let i = 0; i < windows.length; i++) {
+        const windowSnapshots = windows[i];
         if (!windowSnapshots.length) {
           continue;
         }
@@ -462,7 +478,14 @@ export class TrackerService {
           this.db.incrementAnalysisAttempts(windowSnapshots.map((snapshot) => snapshot.id));
           this.db.insertError('analysis', message, error instanceof Error ? error.stack : null);
         }
+
+        this.emitProgress({ phase: 'analyze', current: i + 1, total, message: `AI解析中... (${i + 1}/${total})` });
       }
+
+      this.emitProgress({ phase: 'complete', current: total, total, message: `完了 (${total}件処理)` });
+    } catch (error) {
+      this.emitProgress({ phase: 'error', current: 0, total: 0, message: error instanceof Error ? error.message : '解析エラー' });
+      throw error;
     } finally {
       this.isAnalyzing = false;
     }

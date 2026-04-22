@@ -111,6 +111,30 @@ button { cursor: pointer; }
   border-bottom: 1px solid rgba(220, 38, 38, 0.14);
 }
 
+.progress-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #e3f2fd;
+  border-bottom: 1px solid #bbdefb;
+  font-size: 13px;
+}
+
+.progress-banner--error {
+  background: #ffebee;
+  border-bottom-color: #ef9a9a;
+}
+
+.progress-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .analysis-error-copy {
   display: flex;
   align-items: center;

@@ -154,6 +154,16 @@ describe('ipc-handlers.ts', () => {
     }
   });
 
+  it('registerIpcHandlersがbroadcastAnalysisProgressをtrackerに設定する', async () => {
+    const { registerIpcHandlers } = await import('./ipc-handlers.js');
+    const broadcast = vi.fn();
+    mockTracker.setProgressListener = vi.fn();
+
+    registerIpcHandlers(mockTracker, () => null, vi.fn(), undefined, broadcast);
+
+    expect(mockTracker.setProgressListener).toHaveBeenCalledWith(broadcast);
+  });
+
   it('bootstrapハンドラがtracker.getBootstrapを呼ぶ', async () => {
     const { registerIpcHandlers } = await import('./ipc-handlers.js');
 

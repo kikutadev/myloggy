@@ -171,6 +171,42 @@ describe('preload.ts', () => {
     });
   });
 
+  describe('onAnalysisProgress', () => {
+    it('analysis:progressイベントに登録する', () => {
+      const listener = vi.fn();
+      exposedApi.onAnalysisProgress(listener);
+      expect(ipcRendererMock.on).toHaveBeenCalledWith('analysis:progress', expect.any(Function));
+    });
+
+    it('リスナー登録解除関数を返す', () => {
+      const listener = vi.fn();
+      const unsub = exposedApi.onAnalysisProgress(listener);
+      expect(typeof unsub).toBe('function');
+    });
+
+    it('登録解除関数を呼ぶとoffが呼ばれる', () => {
+      const listener = vi.fn();
+      const unsub = exposedApi.onAnalysisProgress(listener);
+      unsub();
+      expect(ipcRendererMock.off).toHaveBeenCalledWith('analysis:progress', expect.any(Function));
+    });
+
+    it('イベント発火時にリスナーにprogressを渡す', () => {
+      const listener = vi.fn();
+      exposedApi.onAnalysisProgress(listener);
+
+      const registeredListener = ipcRendererMock.on.mock.calls.find(
+        (call: any[]) => call[0] === 'analysis:progress'
+      )?.[1];
+
+      const mockEvent = {} as Electron.IpcRendererEvent;
+      const mockProgress = { phase: 'analyze', current: 1, total: 5, message: 'AI解析中... (1/5)' };
+      registeredListener(mockEvent, mockProgress);
+
+      expect(listener).toHaveBeenCalledWith(mockProgress);
+    });
+  });
+
   describe('API完全性', () => {
     const requiredMethods = [
       'bootstrap',
@@ -179,6 +215,7 @@ describe('preload.ts', () => {
       'getWeekTimeline',
       'getMonthTimeline',
       'onSettingsChanged',
+      'onAnalysisProgress',
       'getSettings',
       'updateSettings',
       'toggleTracking',

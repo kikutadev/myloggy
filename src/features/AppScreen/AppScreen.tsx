@@ -1,8 +1,10 @@
-import type { BootstrapPayload } from '../../../shared/types.js';
+import { useState, useEffect } from 'react';
+import type { AnalysisProgress, BootstrapPayload } from '../../../shared/types.js';
 import { resolveLocalePreference } from '../../../shared/localization.js';
 import { useI18n } from '../../i18n.js';
 import { navigateDate } from '../shared/navigateDate.js';
 import { AnalysisErrorBanner } from '../shared/AnalysisErrorBanner.jsx';
+import { AnalysisProgressBanner } from '../shared/AnalysisProgressBanner.jsx';
 import { DayView } from '../DayView/DayView.jsx';
 import { WeekView } from '../WeekView/WeekView.jsx';
 import { MonthView } from '../MonthView/MonthView.jsx';
@@ -51,6 +53,21 @@ export function AppScreen({
   const { runningReanalyze, reanalyzeDate } = useReanalyze(onReload);
   const { clearingPending, clearPendingSnapshots } = useClearSnapshots(onReload);
   const { clearingErrors, clearErrors } = useClearErrors(onReload);
+  const [progress, setProgress] = useState<AnalysisProgress | null>(null);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const unsub = window.myloggy.onAnalysisProgress((p) => {
+      setProgress(p);
+      if (p.phase === 'complete' || p.phase === 'error') {
+        timeoutId = setTimeout(() => setProgress(null), 3000);
+      }
+    });
+    return () => {
+      unsub();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const analyzeLocked = state.isAnalyzing || runningAnalyze || runningReanalyze;
   const latestAnalysisError = dashboard.errors.find((error) => error.scope === 'analysis') ?? null;
@@ -133,6 +150,8 @@ export function AppScreen({
         onClearErrors={() => { void clearErrors(); }}
         clearingErrors={clearingErrors}
       />
+
+      <AnalysisProgressBanner progress={progress} />
 
       <main className="workspace">
         {view === 'day' ? <DayView dashboard={dashboard} categories={settings.categories ?? []} onRefresh={() => void onReload()} /> : null}

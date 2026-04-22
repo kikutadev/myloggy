@@ -254,3 +254,12 @@ export interface WorkUnitPatch {
   isDistracted?: boolean;
   note?: string | null;
 }
+
+export type AnalysisPhase = 'reset' | 'analyze' | 'complete' | 'error';
+
+export interface AnalysisProgress {
+  phase: AnalysisPhase;
+  current: number;
+  total: number;
+  message: string;
+}

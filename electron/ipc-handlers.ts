@@ -1,13 +1,17 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import type { TrackerService } from './core/tracker-service.js';
-import type { AppSettings, LmStudioStatus, ModelCheckResult } from '../shared/types.js';
+import type { AnalysisProgress, AppSettings, LmStudioStatus, ModelCheckResult } from '../shared/types.js';
 
 export function registerIpcHandlers(
   tracker: TrackerService,
   getMainWindow: () => BrowserWindow | null,
   broadcastSettingsChanged: (settings: AppSettings) => void,
-  createMainWindow?: () => BrowserWindow
+  createMainWindow?: () => BrowserWindow,
+  broadcastAnalysisProgress?: (progress: AnalysisProgress) => void,
 ): void {
+  if (broadcastAnalysisProgress) {
+    tracker.setProgressListener(broadcastAnalysisProgress);
+  }
   ipcMain.handle('bootstrap', (_event, date: string) => tracker.getBootstrap(date));
   ipcMain.handle('dashboard:get', (_event, date: string) => tracker.getDashboard(date));
   ipcMain.handle('timeline:day', (_event, date: string) => tracker.getDayTimeline(date));
